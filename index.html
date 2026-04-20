@@ -1,1 +1,1521 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>사무실 레이아웃 편집기</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8;display:flex;flex-direction:column;height:100vh;overflow:hidden;user-select:none}
+#toolbar{display:flex;align-items:center;gap:5px;padding:7px 12px;background:#fff;border-bottom:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.08);z-index:100;flex-shrink:0;flex-wrap:wrap}
+.tbar-title{font-weight:700;font-size:14px;color:#1e293b;margin-right:4px}
+.tbtn{padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;white-space:nowrap;transition:background .1s,color .1s}
+.tbtn:hover{background:#f0f4f8}
+.tbtn.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
+.tbtn:disabled{opacity:.4;cursor:not-allowed}
+.tsep{width:1px;height:22px;background:#e2e8f0;flex-shrink:0}
+#main{display:flex;flex:1;overflow:hidden;min-height:0}
+#left-panel{width:190px;background:#fff;border-right:1px solid #e2e8f0;overflow-y:auto;flex-shrink:0}
+.psec{padding:6px 0 0}
+.psec-title{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between;padding:4px 10px 4px;cursor:pointer;border-top:1px solid #f1f5f9;user-select:none}
+.psec-title:hover{background:#f8fafc}
+.psec-arrow{font-size:8px;color:#94a3b8;transition:transform .15s;flex-shrink:0}
+.psec-arrow.collapsed{transform:rotate(-90deg)}
+.psec-items{padding:0 10px 6px}
+.psec-items.collapsed{display:none}
+.pal-item.wall-tool{background:#f8fafc;border:1px dashed #cbd5e1;cursor:pointer}
+.pal-item.wall-tool:hover{background:#eff6ff;border-color:#3b82f6}
+.pal-item{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:grab;transition:background .1s;margin-bottom:2px}
+.pal-item:hover{background:#eff6ff}
+.pal-name{font-size:11px;color:#374151;line-height:1.2}
+#canvas-container{flex:1;overflow:hidden;position:relative;background:#e2e8f0;cursor:default}
+#main-canvas{display:block;position:absolute;top:0;left:0}
+#right-panel{width:240px;background:#fff;border-left:1px solid #e2e8f0;overflow-y:auto;flex-shrink:0;display:flex;flex-direction:column}
+.rprop{padding:10px 12px;border-bottom:1px solid #f1f5f9}
+.rprop-title{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.prow{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.plabel{font-size:11px;color:#64748b;width:48px;flex-shrink:0}
+.pinput{flex:1;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;color:#1e293b;min-width:0}
+.pinput:focus{outline:none;border-color:#3b82f6}
+.small-btn{padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;background:#fff;cursor:pointer;font-size:11px}
+.small-btn:hover{background:#f0f4f8}
+#layer-panel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.layer-panel-header{padding:8px 12px 6px;border-bottom:1px solid #f1f5f9;flex-shrink:0}
+.layer-panel-title{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.layer-panel-btns{display:flex;gap:4px;flex-wrap:wrap}
+.layer-panel-btns .small-btn{font-size:10px;padding:3px 6px}
+#layer-list{flex:1;overflow-y:auto;padding:4px 6px}
+.layer-item{display:flex;align-items:center;gap:4px;padding:4px 5px;border-radius:4px;cursor:pointer;font-size:11px;color:#374151;position:relative}
+.layer-item:hover{background:#f8fafc}
+.layer-item.sel{background:#eff6ff;color:#2563eb;font-weight:600}
+.layer-item.hidden-obj{opacity:.45}
+.layer-item.locked-obj{cursor:not-allowed}
+.ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0;border:1px solid #cbd5e1}
+.lname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.lbtn{width:18px;height:18px;border:1px solid transparent;background:transparent;border-radius:3px;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:.55;padding:0}
+.lbtn:hover{background:#f0f4f8;opacity:1;border-color:#e2e8f0}
+.lbtn.active-state{opacity:1}
+.layer-group{margin-bottom:2px}
+.layer-group-hdr{display:flex;align-items:center;gap:4px;padding:4px 5px;border-radius:4px;cursor:pointer;font-size:11px;color:#374151;font-weight:600;background:#f8fafc}
+.layer-group-hdr:hover{background:#f0f4f8}
+.layer-group-hdr.sel-group{background:#dbeafe;color:#1d4ed8}
+.layer-group-arrow{font-size:9px;flex-shrink:0;transition:transform .15s}
+.layer-group-arrow.collapsed{transform:rotate(-90deg)}
+.layer-group-children{padding-left:14px;display:flex;flex-direction:column;gap:1px}
+.layer-sep{height:1px;background:#f1f5f9;margin:3px 0}
+#zoom-badge{position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,.5);color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;pointer-events:none}
+#save-toast{position:absolute;bottom:10px;right:10px;background:rgba(30,200,100,.85);color:#fff;font-size:11px;padding:3px 10px;border-radius:4px;pointer-events:none;opacity:0;transition:opacity .3s}
+#ghost{position:fixed;pointer-events:none;z-index:9999;display:none;opacity:.75}
+#text-editor{display:none;position:absolute;z-index:300}
+#text-editor textarea{border:2px solid #3b82f6;border-radius:4px;padding:4px 6px;font-family:inherit;resize:none;background:rgba(255,255,255,.95);outline:none;text-align:center}
+#wall-hud{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px 12px;align-items:center;gap:6px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.12);z-index:200;white-space:nowrap}
+#wall-hud.visible{display:flex}
+#wall-hud label{color:#64748b;font-size:11px}
+#wall-hud input{width:52px;padding:2px 5px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;color:#1e293b}
+#wall-hud input:focus{outline:none;border-color:#3b82f6}
+#wall-hud .hud-sep{width:1px;height:16px;background:#e2e8f0}
+#wall-hud .hud-apply{padding:2px 8px;border:1px solid #3b82f6;border-radius:4px;background:#3b82f6;color:#fff;cursor:pointer;font-size:11px}
+@media print{#toolbar,#left-panel,#right-panel{display:none!important}#canvas-container{position:fixed;top:0;left:0;width:100vw;height:100vh}}
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <span class="tbar-title">🏢 레이아웃 편집기</span>
+  <div class="tsep"></div>
+  <button class="tbtn active" id="btn-select" onclick="setMode('select')">▶ 선택</button>
+  <button class="tbtn" id="btn-wall" onclick="setMode('wall')">━ 벽 그리기</button>
+  <button class="tbtn" id="btn-measure" onclick="setMode('measure')">📏 측정</button>
+  <button class="tbtn" id="btn-dim" onclick="setMode('dim')">📐 치수</button>
+  <div class="tsep"></div>
+  <button class="tbtn" onclick="deleteSelected()">🗑 삭제</button>
+  <button class="tbtn" onclick="rotateSelected()">↻ 회전</button>
+  <button class="tbtn" onclick="flipSelected()" title="좌우 반전 (F)">↔ 반전</button>
+  <div class="tsep"></div>
+  <button class="tbtn" onclick="groupSelected()" title="그룹 묶기 (Ctrl+G)">🔗 그룹</button>
+  <button class="tbtn" onclick="ungroupSelected()" title="그룹 해제 (Ctrl+Shift+G)">🔓 그룹해제</button>
+  <button class="tbtn" onclick="copySelected()" title="복사 (Ctrl+C)">📋 복사</button>
+  <button class="tbtn" onclick="pasteClipboard()" title="붙여넣기 (Ctrl+V)">📌 붙여넣기</button>
+  <div class="tsep"></div>
+  <button class="tbtn" id="btn-undo" onclick="undo()" disabled>↩ 되돌리기</button>
+  <button class="tbtn" id="btn-redo" onclick="redo()" disabled>↪ 다시실행</button>
+  <div class="tsep"></div>
+  <button class="tbtn" onclick="saveLayout()">💾 저장</button>
+  <button class="tbtn" onclick="loadLayout()">📂 불러오기</button>
+  <button class="tbtn" onclick="exportPNG()">🖼 PNG</button>
+  <button class="tbtn" onclick="window.print()">🖨 인쇄</button>
+  <div class="tsep"></div>
+  <button class="tbtn" onclick="showShortcuts()">⌨ 단축키</button>
+  <div class="tsep"></div>
+  <button class="tbtn" onclick="doZoom(0.15)">🔍+</button>
+  <button class="tbtn" onclick="doZoom(-0.15)">🔍−</button>
+  <button class="tbtn" onclick="resetView()">1:1</button>
+</div>
+<div id="main">
+  <div id="left-panel">
+    <div id="palette"></div>
+  </div>
+  <div id="canvas-container">
+    <canvas id="main-canvas"></canvas>
+    <div id="zoom-badge">100%</div>
+    <div id="save-toast">저장됨</div>
+    <div id="text-editor"><textarea id="text-ta" rows="2"></textarea></div>
+    <div id="wall-hud">
+      <label>두께</label>
+      <input type="number" id="wc-thick" value="8" min="1" max="200" oninput="S.wallT=+this.value;if(tempWall)tempWall.t=S.wallT;render()">
+      <label>px</label>
+      <div class="hud-sep"></div>
+      <label>길이</label>
+      <input type="number" id="wc-len" placeholder="cm" onkeydown="if(event.key==='Enter')applyWallLen()">
+      <label>cm</label>
+      <button class="hud-apply" onclick="applyWallLen()">적용</button>
+    </div>
+  </div>
+  <div id="right-panel">
+    <div class="rprop">
+      <div class="rprop-title">공간 설정</div>
+      <div class="prow"><span class="plabel">가로(m)</span><input class="pinput" type="number" id="off-w" value="20" min="2" max="200" onchange="applyOfficeSize()"></div>
+      <div class="prow"><span class="plabel">세로(m)</span><input class="pinput" type="number" id="off-h" value="15" min="2" max="200" onchange="applyOfficeSize()"></div>
+      <div class="prow"><span class="plabel">격자 스냅</span><label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px"><input type="checkbox" id="snap-chk" checked onchange="S.snap=$('#snap-chk').checked"> ON</label></div>
+      <div class="prow"><span class="plabel">벽 두께</span><input class="pinput" type="number" id="wall-t" value="8" min="2" max="50" onchange="S.wallT=+this.value"></div>
+    </div>
+    <div class="rprop" id="obj-props" style="display:none">
+      <div class="rprop-title">오브젝트 속성</div>
+      <div class="prow"><span class="plabel">이름</span><input class="pinput" id="p-name" oninput="applyPropName()"></div>
+      <div class="prow"><span class="plabel">색상</span><input class="pinput" type="color" id="p-color" style="height:26px;padding:2px" oninput="applyPropColor()"></div>
+      <div class="prow">
+        <span class="plabel">X</span><input class="pinput" type="number" id="p-x" oninput="applyPropGeom()">
+        <span class="plabel" style="width:20px;text-align:center">Y</span><input class="pinput" type="number" id="p-y" oninput="applyPropGeom()">
+      </div>
+      <div class="prow" id="p-wh">
+        <span class="plabel">W</span><input class="pinput" type="number" id="p-w" oninput="applyPropGeom()">
+        <span class="plabel" style="width:20px;text-align:center">H</span><input class="pinput" type="number" id="p-h" oninput="applyPropGeom()">
+      </div>
+      <div class="prow" id="p-rot-row">
+        <span class="plabel">각도°</span><input class="pinput" type="number" id="p-rot" oninput="applyPropGeom()">
+        <button class="small-btn" onclick="rotateSelected()">90°↻</button>
+        <button class="small-btn" onclick="flipSelected()">↔</button>
+      </div>
+      <div class="prow" id="p-textrow" style="display:none">
+        <span class="plabel">텍스트</span>
+        <textarea class="pinput" id="p-text" rows="2" oninput="applyPropText()" style="resize:vertical;min-height:36px;font-size:11px;line-height:1.4"></textarea>
+      </div>
+      <div class="prow" id="p-fsrow" style="display:none">
+        <span class="plabel">글자크기</span>
+        <input class="pinput" type="number" id="p-fontsize" value="18" min="6" max="200" oninput="applyPropFontSize()">
+        <span style="font-size:10px;color:#94a3b8">px</span>
+      </div>
+    </div>
+    <div id="layer-panel">
+      <div class="layer-panel-header">
+        <div class="layer-panel-title">레이어</div>
+        <div class="layer-panel-btns">
+          <button class="small-btn" onclick="layerMove(1)">▲ 위로</button>
+          <button class="small-btn" onclick="layerMove(-1)">▼ 아래로</button>
+        </div>
+      </div>
+      <div id="layer-list"></div>
+    </div>
+  </div>
+</div>
+<canvas id="ghost"></canvas>
+<script>
+const $ = id => document.getElementById(id);
+const GRID = 20, PPM = 40;
+const LS_KEY = 'office-layout-v2';
+
+const S = {
+  objects: [],
+  groups: [],
+  clipboard: null,
+  sel: new Set(),
+  mode: 'select',
+  zoom: 1, panX: 40, panY: 40,
+  snap: true, wallT: 8,
+  offW: 20, offH: 15,
+  nextId: 1,
+  nextGid: 1,
+  undoStack: [], redoStack: [],
+};
+
+const cont  = $('canvas-container');
+const cv    = $('main-canvas');
+const ctx   = cv.getContext('2d');
+
+function resizeCv() { cv.width=cont.clientWidth; cv.height=cont.clientHeight; render(); }
+new ResizeObserver(resizeCv).observe(cont);
+
+// ─── furniture definitions ───────────────────────────────────────────────────
+const FCATS = [
+  { title:'업무 가구', defs:[
+    {sub:'desk1',         name:'책상 (1인용)',      w:80,  h:60,  col:'#f0ece0'},
+    {sub:'desk2',         name:'책상 (2인 마주)',    w:80,  h:120, col:'#f0ece0'},
+    {sub:'deskL',         name:'책상 (ㄱ자형)',      w:150, h:100, col:'#f0ece0'},
+    {sub:'deskS',         name:'책상 (사이드)',      w:100, h:50,  col:'#f0ece0'},
+    {sub:'deskCluster4',  name:'4인 클러스터',       w:160, h:120, col:'#f0ece0'},
+    {sub:'chair',         name:'의자',              w:40,  h:40,  col:'#c8c8c8'},
+    {sub:'partition',     name:'파티션',            w:150, h:6,   col:'#c8cdd4'},
+  ]},
+  { title:'구조 / 시설', defs:[
+    {sub:'__wall__',      name:'벽 그리기',         w:60,  h:14,  col:'#334155'},
+    {sub:'door',          name:'출입문',            w:80,  h:20,  col:'#fed7aa'},
+    {sub:'window',        name:'창문',              w:80,  h:16,  col:'#bae6fd'},
+    {sub:'stairs',        name:'계단',              w:100, h:80,  col:'#f1f5f9'},
+    {sub:'elevator',      name:'엘리베이터',         w:80,  h:80,  col:'#e8eef4'},
+    {sub:'column',        name:'기둥',              w:30,  h:30,  col:'#94a3b8'},
+  ]},
+  { title:'회의 / 라운지', defs:[
+    {sub:'mtgRnd',        name:'회의 테이블 (원)',   w:100, h:100, col:'#f0ece0'},
+    {sub:'mtgRect',       name:'회의 테이블 (직)',   w:160, h:80,  col:'#f0ece0'},
+    {sub:'mtgU',          name:'U자형 테이블',       w:160, h:120, col:'#f0ece0'},
+    {sub:'sofa',          name:'소파 (3인)',         w:120, h:60,  col:'#f0e8f0'},
+    {sub:'sofaCorner',    name:'코너 소파',          w:120, h:120, col:'#f0e8f0'},
+    {sub:'armchair',      name:'안락의자',           w:60,  h:60,  col:'#f0e8f0'},
+    {sub:'coffeeTable',   name:'커피 테이블',        w:80,  h:60,  col:'#f0ece0'},
+  ]},
+  { title:'수납 / 기타', defs:[
+    {sub:'cabinet',       name:'캐비넷',            w:80,  h:40,  col:'#ececec'},
+    {sub:'locker',        name:'사물함 (3칸)',       w:90,  h:40,  col:'#e8eef4'},
+    {sub:'fileCabinet',   name:'파일 캐비넷',        w:40,  h:60,  col:'#e8eef4'},
+    {sub:'wb',            name:'화이트보드',         w:120, h:20,  col:'#f8fafc'},
+  ]},
+  { title:'전자기기', defs:[
+    {sub:'tv',            name:'TV / 모니터',        w:120, h:20,  col:'#e0e4ec'},
+    {sub:'printer',       name:'복합기',             w:60,  h:60,  col:'#e8eef4'},
+    {sub:'serverRack',    name:'서버 랙',            w:60,  h:100, col:'#dde4ec'},
+  ]},
+  { title:'편의시설', defs:[
+    {sub:'fridge',        name:'냉장고',             w:60,  h:60,  col:'#eef4f8'},
+    {sub:'waterDispenser',name:'정수기',             w:30,  h:60,  col:'#dbeafe'},
+    {sub:'plant',         name:'화분',              w:40,  h:40,  col:'#dcfce7'},
+  ]},
+  { title:'주석', defs:[
+    {sub:'textlabel',     name:'텍스트 레이블',      w:120, h:40,  col:'#fffbeb'},
+    {sub:'roomlabel',     name:'룸 라벨 (대)',       w:180, h:60,  col:'rgba(0,0,0,0)'},
+  ]},
+  { title:'화장실', defs:[
+    {sub:'toilet',        name:'변기',              w:40,  h:60,  col:'#f0f8f4'},
+    {sub:'sink',          name:'세면대',            w:40,  h:40,  col:'#f0f8f4'},
+    {sub:'urinal',        name:'소변기',            w:40,  h:40,  col:'#f0f8f4'},
+    {sub:'bathtub',       name:'욕조',              w:80,  h:160, col:'#f0f8f4'},
+    {sub:'shower',        name:'샤워부스',           w:80,  h:80,  col:'#f0f8f4'},
+  ]},
+];
+
+const FDEFS = FCATS.flatMap(c=>c.defs);
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render() {
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#cbd5e1'; ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(S.panX, S.panY);
+  ctx.scale(S.zoom, S.zoom);
+
+  const ow = S.offW * PPM, oh = S.offH * PPM;
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, ow, oh);
+
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+  for (let x=0;x<=ow;x+=GRID){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,oh);ctx.stroke();}
+  for (let y=0;y<=oh;y+=GRID){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(ow,y);ctx.stroke();}
+  ctx.strokeStyle = '#c7d2dc'; ctx.lineWidth = 0.8;
+  for (let x=0;x<=ow;x+=PPM){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,oh);ctx.stroke();}
+  for (let y=0;y<=oh;y+=PPM){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(ow,y);ctx.stroke();}
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 2;
+  ctx.strokeRect(0, 0, ow, oh);
+
+  const sorted = [...S.objects].sort((a,b)=>(a.zi||0)-(b.zi||0));
+  for (const o of sorted) {
+    if (o.visible === false) continue;
+    drawObj(o, S.sel.has(o.id), hover===o.id && !S.sel.has(o.id));
+  }
+
+  if (tempDim) drawDimension(tempDim, false, false, 0.6);
+  if (tempWall) {
+    drawWall(tempWall, false, false, 0.55);
+    const wdx=tempWall.x2-tempWall.x1,wdy=tempWall.y2-tempWall.y1,wlen=Math.hypot(wdx,wdy);
+    if(wlen>4){
+      const cm=Math.round(wlen/PPM*100);
+      const mx=(tempWall.x1+tempWall.x2)/2,my=(tempWall.y1+tempWall.y2)/2;
+      const txt=cm+'cm';
+      ctx.save();ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      const tw=ctx.measureText(txt).width;
+      ctx.fillStyle='rgba(15,23,42,.82)';rr(ctx,mx-tw/2-5,my-9,tw+10,18,4);ctx.fill();
+      ctx.fillStyle='#fff';ctx.fillText(txt,mx,my);ctx.restore();
+    }
+  }
+  if(boxSel){
+    ctx.save();
+    const bx=Math.min(boxSel.x1,boxSel.x2),by=Math.min(boxSel.y1,boxSel.y2);
+    const bw=Math.abs(boxSel.x2-boxSel.x1),bh=Math.abs(boxSel.y2-boxSel.y1);
+    ctx.fillStyle='rgba(59,130,246,.07)';ctx.fillRect(bx,by,bw,bh);
+    ctx.strokeStyle='#3b82f6';ctx.lineWidth=1/S.zoom;ctx.setLineDash([4/S.zoom,3/S.zoom]);
+    ctx.strokeRect(bx,by,bw,bh);ctx.setLineDash([]);ctx.restore();
+  }
+  if(measure.p1){
+    ctx.save();
+    const p2=measure.p2||measure.hover;
+    if(p2){
+      ctx.strokeStyle='#ef4444';ctx.lineWidth=1.5/S.zoom;ctx.setLineDash([5/S.zoom,3/S.zoom]);
+      ctx.beginPath();ctx.moveTo(measure.p1.x,measure.p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+      ctx.setLineDash([]);
+      const dx=p2.x-measure.p1.x,dy=p2.y-measure.p1.y;
+      const cm=Math.round(Math.hypot(dx,dy)/PPM*100);
+      const mx=(measure.p1.x+p2.x)/2,my=(measure.p1.y+p2.y)/2;
+      const txt=cm+'cm';
+      ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      const tw=ctx.measureText(txt).width;
+      ctx.fillStyle=measure.p2?'rgba(239,68,68,.9)':'rgba(239,68,68,.7)';
+      rr(ctx,mx-tw/2-6,my-10,tw+12,20,5);ctx.fill();
+      ctx.fillStyle='#fff';ctx.fillText(txt,mx,my);
+    }
+    ctx.fillStyle='#ef4444';ctx.strokeStyle='#fff';ctx.lineWidth=1.5/S.zoom;
+    for(const pt of[measure.p1,measure.p2].filter(Boolean)){
+      ctx.beginPath();ctx.arc(pt.x,pt.y,5/S.zoom,0,Math.PI*2);ctx.fill();ctx.stroke();
+    }
+    ctx.restore();
+  }
+  for (const id of S.sel) { const o=getO(id); if(o&&o.visible!==false) drawHandles(o); }
+  ctx.restore();
+}
+
+function drawObj(o, sel, hov) {
+  if (o.type === 'wall') drawWall(o, sel, hov, 1);
+  else if (o.type === 'dimension') drawDimension(o, sel, hov, 1);
+  else drawFurniture(o, sel, hov);
+}
+
+function drawWall(w, sel, hov, alpha) {
+  const dx=w.x2-w.x1, dy=w.y2-w.y1, len=Math.hypot(dx,dy);
+  if (len<1) return;
+  const t=(w.t||S.wallT)/2, nx=-dy/len*t, ny=dx/len*t;
+  ctx.save(); ctx.globalAlpha=alpha;
+  ctx.beginPath();
+  ctx.moveTo(w.x1+nx,w.y1+ny); ctx.lineTo(w.x2+nx,w.y2+ny);
+  ctx.lineTo(w.x2-nx,w.y2-ny); ctx.lineTo(w.x1-nx,w.y1-ny);
+  ctx.closePath();
+  ctx.fillStyle=sel?'#1d4ed8':hov?'#6b7280':(w.col||'#334155'); ctx.fill();
+  ctx.strokeStyle=sel?'#93c5fd':'#1f2937'; ctx.lineWidth=sel?1.5:0.5; ctx.stroke();
+  ctx.restore();
+}
+
+// ── isLabelType helper ───────────────────────────────────────────────────────
+function isLabelType(sub){ return sub==='textlabel' || sub==='roomlabel'; }
+
+function drawFurniture(o, sel, hov) {
+  ctx.save();
+  ctx.translate(o.x + o.w/2, o.y + o.h/2);
+  ctx.rotate(o.rot * Math.PI/180);
+  if (o.flipX) ctx.scale(-1, 1);
+  const hw=o.w/2, hh=o.h/2;
+  const col = hov ? lighten(o.col||'#dbeafe') : (o.col||'#dbeafe');
+
+  // ── 텍스트 레이블 / 룸 라벨 공통 처리 ────────────────────────────────────
+  if (isLabelType(o.sub)) {
+    const isRoom = o.sub === 'roomlabel';
+
+    // fill
+    ctx.fillStyle = col;
+    rr(ctx, -hw, -hh, o.w, o.h, 5);
+    ctx.fill();
+
+    // 테두리: textlabel → dashed, roomlabel → 없음
+    if (!isRoom) {
+      ctx.strokeStyle = sel ? '#2563eb' : hov ? '#64748b' : '#94a3b8';
+      ctx.lineWidth = sel ? 1.5 : 1;
+      if (!sel) ctx.setLineDash([4, 3]);
+      rr(ctx, -hw, -hh, o.w, o.h, 5);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // 텍스트
+    const defaultText = isRoom ? '공간명' : '텍스트';
+    const defaultFs   = isRoom ? 22 : 18;
+    const fs = Math.min(+(o.fontSize || defaultFs), hh * 1.6);
+    ctx.font = `bold ${fs}px sans-serif`;
+    ctx.fillStyle = o.textColor || '#1e293b';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const lines = (o.text || defaultText).split('\n');
+    const lh = fs * 1.25;
+    lines.forEach((ln, i) => ctx.fillText(ln, 0, (i - (lines.length - 1) / 2) * lh));
+
+  } else {
+    // ── 일반 가구 ────────────────────────────────────────────────────────────
+    drawShape(ctx, o.sub, hw, hh, o.w, o.h, col, sel);
+    if (sel && S.sel.size === 1) {
+      const wCm=Math.round(o.w/PPM*100), hCm=Math.round(o.h/PPM*100);
+      const label=wCm+'×'+hCm+'cm';
+      ctx.font='bold 10px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+      const tw=ctx.measureText(label).width;
+      ctx.fillStyle='rgba(255,255,255,.9)'; ctx.fillRect(-tw/2-3,-hh-20,tw+6,15);
+      ctx.fillStyle='#1e40af'; ctx.fillText(label,0,-hh-8);
+    }
+  }
+
+  // 그룹 인디케이터
+  if (o.gid) {
+    ctx.strokeStyle='rgba(99,102,241,.5)'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+    ctx.strokeRect(-hw-2,-hh-2,o.w+4,o.h+4); ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
+function drawHandles(o) {
+  if (o.type==='wall'||o.type==='dimension') {
+    ctx.fillStyle='#3b82f6'; ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
+    for (const [px,py] of [[o.x1,o.y1],[o.x2,o.y2]]) {
+      ctx.beginPath(); ctx.arc(px,py,6,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    }
+    return;
+  }
+  ctx.save();
+  ctx.translate(o.x+o.w/2, o.y+o.h/2);
+  ctx.rotate(o.rot*Math.PI/180);
+  const hw=o.w/2, hh=o.h/2;
+  ctx.strokeStyle='#3b82f6'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+  ctx.strokeRect(-hw-4,-hh-4,o.w+8,o.h+8); ctx.setLineDash([]);
+  ctx.fillStyle='#fff'; ctx.strokeStyle='#3b82f6'; ctx.lineWidth=1.5;
+  for (const h of getHandles(o)) {
+    ctx.fillRect(h.lx-5,h.ly-5,10,10); ctx.strokeRect(h.lx-5,h.ly-5,10,10);
+  }
+  ctx.restore();
+}
+
+// ─── SHAPE DRAWING ───────────────────────────────────────────────────────────
+function drawShape(c, sub, hw, hh, w, h, col, sel) {
+  const str=sel?'#2563eb':'#475569';
+  const dark=darken(col,0.12);
+  c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+  switch(sub) {
+    case 'desk1': {
+      rr(c,-hw,-hh,w,h,3); c.fill(); c.stroke();
+      c.fillStyle='#1e293b'; rr(c,-14,-hh+4,28,14,2); c.fill();
+      c.fillStyle='#64748b'; rr(c,-18,-hh+h*.55,36,8,2); c.fill(); break;
+    }
+    case 'desk2': {
+      rr(c,-hw,-hh,w,h/2-2,3); c.fill(); c.stroke();
+      rr(c,-hw,2,w,h/2-2,3); c.fill(); c.stroke();
+      c.fillStyle='#1e293b';
+      rr(c,-10,-hh+4,20,12,2); c.fill();
+      rr(c,-10,hh-16,20,12,2); c.fill(); break;
+    }
+    case 'deskL': {
+      const t=50;
+      const cr=Math.min(14,t*0.6);
+      c.beginPath();
+      c.moveTo(-hw,-hh); c.lineTo(hw,-hh); c.lineTo(hw,-hh+t);
+      c.lineTo(-hw+t+cr,-hh+t);
+      c.quadraticCurveTo(-hw+t,-hh+t,-hw+t,-hh+t+cr);
+      c.lineTo(-hw+t,hh); c.lineTo(-hw,hh); c.closePath();
+      c.fill(); c.stroke();
+      c.fillStyle='#1e293b'; rr(c,hw-26,-hh+4,20,t-6,2); c.fill(); break;
+    }
+    case 'deskS': {
+      const r = 18;
+      c.beginPath();
+      c.moveTo(-hw + r, -hh);
+      c.lineTo(hw, -hh);
+      c.lineTo(hw, hh);
+      c.lineTo(-hw + r, hh);
+      c.arcTo(-hw, hh, -hw, hh - r, r);
+      c.arcTo(-hw, -hh, -hw + r, -hh, r);
+      c.closePath();
+      c.fillStyle = col;
+      c.fill();
+      c.stroke();
+      break;
+    }
+    case 'chair': {
+      c.fillStyle=dark; rr(c,-hw,-hh,w,10,3); c.fill(); c.stroke();
+      c.fillStyle=col; rr(c,-hw,-hh+10,w,h-14,5); c.fill(); c.stroke();
+      c.fillStyle='#94a3b8'; rr(c,-hw+4,hh-4,w-8,4,2); c.fill(); break;
+    }
+    case 'mtgRnd': {
+      const r=Math.min(hw,hh)-6;
+      c.beginPath(); c.arc(0,0,r,0,Math.PI*2); c.fill(); c.stroke();
+      c.fillStyle='#fef9c3'; c.strokeStyle='#a16207'; c.lineWidth=.8;
+      const n=Math.max(4,Math.min(8,Math.round(r*.15)*2));
+      for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2;c.save();c.rotate(a);rr(c,-7,r+2,14,9,2);c.fill();c.stroke();c.restore();} break;
+    }
+    case 'mtgRect': {
+      rr(c,-hw,-hh,w,h,4); c.fill(); c.stroke();
+      c.fillStyle='#fef9c3'; c.strokeStyle='#a16207'; c.lineWidth=.8;
+      const cols=Math.max(1,Math.floor(w/30));
+      for(let i=0;i<cols;i++){const cx=-hw+w/(cols*2)+i*(w/cols);rr(c,cx-8,-hh-12,16,10,2);c.fill();c.stroke();rr(c,cx-8,hh+2,16,10,2);c.fill();c.stroke();}
+      const rows=Math.max(1,Math.floor(h/30));
+      for(let i=0;i<rows;i++){const cy=-hh+h/(rows*2)+i*(h/rows);rr(c,-hw-12,cy-8,10,16,2);c.fill();c.stroke();rr(c,hw+2,cy-8,10,16,2);c.fill();c.stroke();} break;
+    }
+    case 'cabinet': {
+      rr(c,-hw,-hh,w,h,2); c.fill(); c.stroke();
+      const dr=Math.max(1,Math.floor(h/18));
+      c.strokeStyle='#94a3b8'; c.lineWidth=.7;
+      for(let i=1;i<dr;i++){const y=-hh+i*(h/dr);c.beginPath();c.moveTo(-hw+2,y);c.lineTo(hw-2,y);c.stroke();}
+      c.fillStyle='#94a3b8';
+      for(let i=0;i<dr;i++){const y=-hh+(i+.5)*(h/dr);c.beginPath();c.arc(hw-10,y,3,0,Math.PI*2);c.fill();} break;
+    }
+    case 'sofa': {
+      c.fillStyle=dark; rr(c,-hw,-hh,w,h*.38,5); c.fill(); c.stroke();
+      c.fillStyle=col; rr(c,-hw,-hh+h*.38,w,h*.62,5); c.fill(); c.stroke();
+      c.fillStyle=dark;
+      rr(c,-hw,-hh,w*.14,h,4); c.fill(); c.stroke();
+      rr(c,hw-w*.14,-hh,w*.14,h,4); c.fill(); c.stroke();
+      const cush=Math.max(1,Math.floor((w*.72)/45));
+      c.strokeStyle='#94a3b8'; c.lineWidth=.7;
+      for(let i=1;i<cush;i++){const cx=-hw+w*.14+i*(w*.72/cush);c.beginPath();c.moveTo(cx,-hh+h*.38);c.lineTo(cx,hh);c.stroke();} break;
+    }
+    case 'wb': {
+      c.fillStyle='#e2e8f0'; rr(c,-hw,-hh,w,h,2); c.fill(); c.stroke();
+      c.fillStyle='#fff'; rr(c,-hw+3,-hh+2,w-6,h-4,1); c.fill();
+      c.strokeStyle='#94a3b8'; c.lineWidth=2; c.strokeRect(-hw+1,-hh+1,w-2,h-2); break;
+    }
+    case 'door': {
+      c.fillStyle=col; c.strokeStyle=str;
+      c.fillRect(-hw,-hh,w,h); c.strokeRect(-hw,-hh,w,h);
+      c.strokeStyle='#94a3b8'; c.lineWidth=1; c.setLineDash([3,3]);
+      c.beginPath(); c.arc(-hw,hh,w,-Math.PI/2,0); c.stroke(); c.setLineDash([]);
+      c.strokeStyle='#374151'; c.lineWidth=2;
+      c.beginPath(); c.moveTo(-hw,-hh); c.lineTo(-hw,hh); c.lineTo(-hw+w,hh); c.stroke();
+      c.fillStyle='#94a3b8'; c.beginPath(); c.arc(hw-8,0,3,0,Math.PI*2); c.fill(); break;
+    }
+    case 'window': {
+      c.fillStyle='#bfdbfe'; c.strokeStyle='#3b82f6'; c.lineWidth=2;
+      c.fillRect(-hw,-hh,w,h); c.strokeRect(-hw,-hh,w,h);
+      c.strokeStyle='#93c5fd'; c.lineWidth=1;
+      c.beginPath(); c.moveTo(-hw,0); c.lineTo(hw,0); c.stroke();
+      const pn=Math.max(1,Math.floor(w/30));
+      for(let i=1;i<pn;i++){const px=-hw+i*(w/pn);c.beginPath();c.moveTo(px,-hh);c.lineTo(px,hh);c.stroke();} break;
+    }
+    case 'toilet': {
+      c.fillStyle=col; c.strokeStyle=str;
+      rr(c,-hw,-hh,w,h*.32,3); c.fill(); c.stroke();
+      c.beginPath(); c.ellipse(0,hh*.28,hw*.88,hh*.66,0,0,Math.PI*2); c.fill(); c.stroke();
+      c.strokeStyle='#64748b'; c.lineWidth=1.5;
+      c.beginPath(); c.ellipse(0,hh*.28,hw*.68,hh*.52,0,0,Math.PI*2); c.stroke(); break;
+    }
+    case 'sink': {
+      c.fillStyle=col; c.strokeStyle=str;
+      rr(c,-hw,-hh,w,h,7); c.fill(); c.stroke();
+      c.fillStyle='#bae6fd'; c.beginPath(); c.ellipse(0,2,hw*.7,hh*.65,0,0,Math.PI*2); c.fill(); c.stroke();
+      c.fillStyle='#64748b'; c.beginPath(); c.arc(0,2,4,0,Math.PI*2); c.fill();
+      c.fillStyle='#94a3b8'; rr(c,-4,-hh+2,8,8,2); c.fill(); break;
+    }
+    case 'partition': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h,2); c.fill(); c.stroke();
+      c.fillStyle=darken(col,.15); rr(c,-hw,-hh,w,Math.min(4,hh),1); c.fill();
+      c.strokeStyle=darken(col,.2); c.lineWidth=1.5;
+      const fw=Math.min(6,hw*.15);
+      c.beginPath(); c.moveTo(-hw+fw,-hh); c.lineTo(-hw+fw,hh); c.stroke();
+      c.beginPath(); c.moveTo(hw-fw,-hh); c.lineTo(hw-fw,hh); c.stroke(); break;
+    }
+    case 'deskCluster4': {
+      c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      c.fillStyle=col; rr(c,-hw,-hh,w,h,3); c.fill(); c.stroke();
+      c.strokeStyle=darken(col,.25); c.lineWidth=1;
+      c.beginPath(); c.moveTo(0,-hh+3); c.lineTo(0,hh-3); c.stroke();
+      c.beginPath(); c.moveTo(-hw+3,0); c.lineTo(hw-3,0); c.stroke();
+      c.fillStyle='#334155';
+      for(const[mx,my]of[[-hw*.5,-hh*.5],[hw*.5,-hh*.5],[-hw*.5,hh*.5],[hw*.5,hh*.5]]){
+        rr(c,mx-8,my-4,16,8,1); c.fill();
+      }
+      break;
+    }
+    case 'mtgU': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      const tw=w*.2;
+      rr(c,-hw,-hh,w,tw,2); c.fill(); c.stroke();
+      rr(c,-hw,-hh,tw,h,2); c.fill(); c.stroke();
+      rr(c,hw-tw,-hh,tw,h,2); c.fill(); c.stroke();
+      c.fillStyle='#c8b88a'; c.strokeStyle='#a16207'; c.lineWidth=.8;
+      const cols=Math.max(1,Math.floor(w/30));
+      for(let i=0;i<cols;i++){const cx=-hw+w/(cols*2)+i*(w/cols);rr(c,cx-7,-hh-11,14,9,2);c.fill();c.stroke();}
+      const rows=Math.max(1,Math.floor((h-tw)/30));
+      for(let i=0;i<rows;i++){const cy=-hh+tw+h/(rows*2*1.5)+i*((h-tw)/rows);
+        rr(c,-hw+tw+3,cy-7,10,14,2);c.fill();c.stroke();
+        rr(c,hw-tw-13,cy-7,10,14,2);c.fill();c.stroke();}
+      break;
+    }
+    case 'sofaCorner': {
+      const arm=w*.15;
+      c.fillStyle=darken(col,.1); c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      c.beginPath();
+      c.moveTo(-hw,-hh); c.lineTo(hw,-hh); c.lineTo(hw,-hh+arm*1.2);
+      c.lineTo(-hw+arm*1.2,-hh+arm*1.2); c.lineTo(-hw+arm*1.2,hh); c.lineTo(-hw,hh);
+      c.closePath(); c.fill(); c.stroke();
+      c.fillStyle=col;
+      rr(c,-hw+arm,-hh+arm*1.2,w-arm*2,h-arm*2.2,4); c.fill(); c.stroke();
+      c.fillStyle=darken(col,.12);
+      rr(c,-hw,-hh,arm,h,3); c.fill(); c.stroke();
+      rr(c,-hw,-hh,w,arm,3); c.fill(); c.stroke();
+      break;
+    }
+    case 'armchair': {
+      c.fillStyle=darken(col,.12); c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h*.35,4); c.fill(); c.stroke();
+      c.fillStyle=col;
+      rr(c,-hw,-hh+h*.35,w,h*.65,4); c.fill(); c.stroke();
+      c.fillStyle=darken(col,.12);
+      rr(c,-hw,-hh,w*.18,h,4); c.fill(); c.stroke();
+      rr(c,hw-w*.18,-hh,w*.18,h,4); c.fill(); c.stroke();
+      break;
+    }
+    case 'coffeeTable': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      c.beginPath(); c.ellipse(0,0,hw-4,hh-4,0,0,Math.PI*2); c.fill(); c.stroke();
+      c.strokeStyle=darken(col,.2); c.lineWidth=.6;
+      c.beginPath(); c.ellipse(0,0,hw-10,hh-10,0,0,Math.PI*2); c.stroke();
+      break;
+    }
+    case 'locker': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h,2); c.fill(); c.stroke();
+      const n=3;
+      c.strokeStyle=darken(col,.2); c.lineWidth=.8;
+      for(let i=1;i<n;i++){const x=-hw+i*(w/n);c.beginPath();c.moveTo(x,-hh+2);c.lineTo(x,hh-2);c.stroke();}
+      c.fillStyle='#94a3b8';
+      for(let i=0;i<n;i++){const cx=-hw+(i+.5)*(w/n);c.beginPath();c.arc(cx,0,3,0,Math.PI*2);c.fill();}
+      c.strokeStyle='#94a3b8'; c.lineWidth=.5;
+      for(let i=0;i<n;i++){const x0=-hw+i*(w/n)+4,x1=-hw+(i+1)*(w/n)-4;
+        for(let j=0;j<3;j++){const y=-hh+6+j*4;c.beginPath();c.moveTo(x0,y);c.lineTo(x1,y);c.stroke();}}
+      break;
+    }
+    case 'fileCabinet': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h,2); c.fill(); c.stroke();
+      const dr=Math.max(2,Math.floor(h/20));
+      c.strokeStyle=darken(col,.2); c.lineWidth=.8;
+      for(let i=1;i<dr;i++){const y=-hh+i*(h/dr);c.beginPath();c.moveTo(-hw+2,y);c.lineTo(hw-2,y);c.stroke();}
+      c.fillStyle='#94a3b8';
+      for(let i=0;i<dr;i++){const y=-hh+(i+.5)*(h/dr);c.beginPath();c.arc(0,y,3,0,Math.PI*2);c.fill();}
+      break;
+    }
+    case 'tv': {
+      c.fillStyle='#1e293b'; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h*.7,3); c.fill(); c.stroke();
+      c.fillStyle='#0f172a'; rr(c,-hw+3,-hh+3,w-6,h*.7-6,2); c.fill();
+      c.fillStyle=col; c.strokeStyle=str;
+      c.fillRect(-6,hh*.3-h*.15,12,h*.5); c.strokeRect(-6,hh*.3-h*.15,12,h*.5);
+      c.fillRect(-hw*.4,hh*.35,w*.8,h*.2); c.strokeRect(-hw*.4,hh*.35,w*.8,h*.2);
+      break;
+    }
+    case 'printer': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h*.6,3); c.fill(); c.stroke();
+      c.fillStyle=darken(col,.08); rr(c,-hw+6,hh*.1,w-12,h*.35,2); c.fill(); c.stroke();
+      c.fillStyle='#fff'; rr(c,-hw*.5,-hh+4,w*.5,4,1); c.fill();
+      c.fillStyle='#3b82f6'; c.beginPath(); c.arc(hw-10,-hh*.3,4,0,Math.PI*2); c.fill();
+      break;
+    }
+    case 'serverRack': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h,2); c.fill(); c.stroke();
+      const units=Math.max(3,Math.floor(h/14));
+      c.strokeStyle=darken(col,.2); c.lineWidth=.6;
+      for(let i=0;i<units;i++){
+        const y=-hh+4+i*(h-8)/units, uh=(h-8)/units-2;
+        rr(c,-hw+4,y,w-8,uh,1); c.stroke();
+        c.fillStyle=i%3===0?'#22c55e':i%3===1?'#f59e0b':'#3b82f6';
+        c.beginPath(); c.arc(hw-8,y+uh/2,2,0,Math.PI*2); c.fill();
+      }
+      break;
+    }
+    case 'fridge': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h,3); c.fill(); c.stroke();
+      const freeze=h*.35;
+      c.strokeStyle=darken(col,.2); c.lineWidth=1;
+      c.beginPath(); c.moveTo(-hw+2,-hh+freeze); c.lineTo(hw-2,-hh+freeze); c.stroke();
+      c.strokeStyle='#94a3b8'; c.lineWidth=2;
+      c.beginPath(); c.moveTo(hw-8,-hh+6); c.lineTo(hw-8,-hh+freeze-6); c.stroke();
+      c.beginPath(); c.moveTo(hw-8,-hh+freeze+6); c.lineTo(hw-8,hh-8); c.stroke();
+      break;
+    }
+    case 'waterDispenser': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h*.75,3); c.fill(); c.stroke();
+      c.fillStyle='#bae6fd'; c.strokeStyle='#3b82f6'; c.lineWidth=1;
+      c.beginPath(); c.ellipse(0,-hh+h*.12,hw*.5,h*.12,0,0,Math.PI*2); c.fill(); c.stroke();
+      c.fillStyle='#64748b';
+      c.fillRect(-8,hh*.05,16,6); c.strokeRect(-8,hh*.05,16,6);
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=1;
+      rr(c,-hw,hh*.75,w,h*.25,2); c.fill(); c.stroke();
+      break;
+    }
+    case 'plant': {
+      c.fillStyle='#a16207'; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      c.beginPath(); c.moveTo(-hw*.5,hh*.1); c.lineTo(hw*.5,hh*.1); c.lineTo(hw*.35,hh); c.lineTo(-hw*.35,hh); c.closePath(); c.fill(); c.stroke();
+      for(const[lx,ly,r]of[[0,-hh*.2,hh*.55],[-hw*.4,-hh*.1,hh*.35],[hw*.4,-hh*.1,hh*.35]]){
+        c.fillStyle='#16a34a'; c.strokeStyle='#15803d'; c.lineWidth=.8;
+        c.beginPath(); c.arc(lx,ly,r,0,Math.PI*2); c.fill(); c.stroke();
+      }
+      break;
+    }
+    case 'stairs': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      c.fillRect(-hw,-hh,w,h); c.strokeRect(-hw,-hh,w,h);
+      const treads=Math.max(3,Math.floor(h/12));
+      c.strokeStyle=darken(col,.3); c.lineWidth=1;
+      for(let i=1;i<treads;i++){const y=-hh+i*(h/treads);c.beginPath();c.moveTo(-hw+2,y);c.lineTo(hw-2,y);c.stroke();}
+      c.strokeStyle='#64748b'; c.lineWidth=1.5;
+      c.beginPath(); c.moveTo(0,-hh*.6); c.lineTo(0,hh*.6); c.stroke();
+      c.beginPath(); c.moveTo(0,hh*.6); c.lineTo(-5,hh*.3); c.moveTo(0,hh*.6); c.lineTo(5,hh*.3); c.stroke();
+      break;
+    }
+    case 'elevator': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h,2); c.fill(); c.stroke();
+      c.strokeStyle=darken(col,.3); c.lineWidth=1;
+      c.beginPath(); c.moveTo(-hw+6,-hh+6); c.lineTo(hw-6,hh-6); c.stroke();
+      c.beginPath(); c.moveTo(hw-6,-hh+6); c.lineTo(-hw+6,hh-6); c.stroke();
+      c.strokeStyle=str; c.lineWidth=1.5;
+      c.beginPath(); c.moveTo(0,-hh); c.lineTo(0,hh); c.stroke();
+      c.fillStyle='#475569';
+      c.beginPath(); c.moveTo(-hw*.4,0); c.lineTo(-hw*.4-5,8); c.lineTo(-hw*.4+5,8); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(hw*.4,0); c.lineTo(hw*.4-5,-8); c.lineTo(hw*.4+5,-8); c.closePath(); c.fill();
+      break;
+    }
+    case 'column': {
+      c.fillStyle='#64748b'; c.strokeStyle='#1e293b'; c.lineWidth=sel?2:1.5;
+      c.fillRect(-hw,-hh,w,h); c.strokeRect(-hw,-hh,w,h);
+      c.strokeStyle='#94a3b8'; c.lineWidth=.5;
+      for(let i=1;i<4;i++){const t=i*.25;c.beginPath();c.moveTo(-hw+w*t,-hh);c.lineTo(-hw,hh-h*t);c.stroke();c.beginPath();c.moveTo(-hw+w*t,hh);c.lineTo(hw,-hh+h*t);c.stroke();}
+      break;
+    }
+    case 'urinal': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,hh*.4,2); c.fill(); c.stroke();
+      c.beginPath();
+      c.moveTo(-hw,-hh*.1); c.lineTo(-hw*.6,hh); c.lineTo(hw*.6,hh); c.lineTo(hw,-hh*.1);
+      c.closePath(); c.fill(); c.stroke();
+      c.fillStyle='#94a3b8'; c.beginPath(); c.arc(0,hh*.6,4,0,Math.PI*2); c.fill();
+      break;
+    }
+    case 'bathtub': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h,8); c.fill(); c.stroke();
+      c.fillStyle='#bae6fd'; c.strokeStyle='#93c5fd';
+      c.beginPath(); c.ellipse(0,hh*.15,hw*.75,hh*.65,0,0,Math.PI*2); c.fill(); c.stroke();
+      c.fillStyle='#94a3b8'; c.strokeStyle='#64748b'; c.lineWidth=1;
+      rr(c,-hw*.25,-hh+3,w*.5,hh*.25,3); c.fill(); c.stroke();
+      c.fillStyle='#64748b'; c.beginPath(); c.arc(0,hh*.7,4,0,Math.PI*2); c.fill();
+      break;
+    }
+    case 'shower': {
+      c.fillStyle=col; c.strokeStyle=str; c.lineWidth=sel?1.5:1;
+      rr(c,-hw,-hh,w,h,4); c.fill(); c.stroke();
+      c.strokeStyle='#64748b'; c.lineWidth=1;
+      c.beginPath(); c.arc(hw*.4,hh*.4,5,0,Math.PI*2); c.stroke();
+      c.beginPath(); c.arc(hw*.4,hh*.4,2,0,Math.PI*2); c.stroke();
+      c.fillStyle='#64748b';
+      c.beginPath(); c.arc(-hw*.6,-hh*.6,6,0,Math.PI*2); c.fill();
+      c.strokeStyle='#bae6fd'; c.lineWidth=1;
+      for(let a=0;a<6;a++){const ang=(a/6)*Math.PI*.8+Math.PI*.2;c.beginPath();c.moveTo(-hw*.6,-hh*.6);c.lineTo(-hw*.6+Math.cos(ang)*14,-hh*.6+Math.sin(ang)*14);c.stroke();}
+      c.strokeStyle='#93c5fd'; c.lineWidth=1.5;
+      c.beginPath(); c.moveTo(-hw,-hh); c.lineTo(-hw,hh); c.stroke();
+      c.beginPath(); c.moveTo(-hw,-hh); c.lineTo(hw,-hh); c.stroke();
+      break;
+    }
+    default: { rr(c,-hw,-hh,w,h,3); c.fill(); c.stroke(); }
+  }
+}
+
+function drawDimension(d, sel, hov, alpha) {
+  const dx=d.x2-d.x1, dy=d.y2-d.y1, len=Math.hypot(dx,dy);
+  if(len<2) return;
+  ctx.save(); ctx.globalAlpha=alpha??1;
+  const col=sel?'#2563eb':hov?'#3b82f6':(d.col||'#1e40af');
+  const ux=dx/len, uy=dy/len;
+  const nx=-uy,   ny=ux;
+  const tk=9;
+  ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.fillStyle=col;
+  ctx.beginPath(); ctx.moveTo(d.x1,d.y1); ctx.lineTo(d.x2,d.y2); ctx.stroke();
+  for(const[px,py] of [[d.x1,d.y1],[d.x2,d.y2]]) {
+    ctx.beginPath();
+    ctx.moveTo(px+nx*tk-ux*tk, py+ny*tk-uy*tk);
+    ctx.lineTo(px-nx*tk+ux*tk, py-ny*tk+uy*tk);
+    ctx.stroke();
+  }
+  const cm=Math.round(len/PPM*100);
+  const mx=(d.x1+d.x2)/2, my=(d.y1+d.y2)/2;
+  const angle=Math.atan2(dy,dx);
+  ctx.save();
+  ctx.translate(mx,my); ctx.rotate(angle);
+  ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+  const txt=cm+'cm', tw=ctx.measureText(txt).width;
+  ctx.fillStyle='rgba(255,255,255,.9)';
+  rr(ctx,-tw/2-4,-14,tw+8,13,3); ctx.fill();
+  ctx.fillStyle=col; ctx.fillText(txt,0,-2);
+  ctx.restore();
+  ctx.restore();
+}
+
+function rr(c,x,y,w,h,r) {
+  r=Math.min(r||0,Math.abs(w)/2,Math.abs(h)/2);
+  c.beginPath();
+  c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.arcTo(x+w,y,x+w,y+r,r);
+  c.lineTo(x+w,y+h-r); c.arcTo(x+w,y+h,x+w-r,y+h,r);
+  c.lineTo(x+r,y+h); c.arcTo(x,y+h,x,y+h-r,r);
+  c.lineTo(x,y+r); c.arcTo(x,y,x+r,y,r);
+  c.closePath();
+}
+function lighten(hex){try{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return '#'+[r,g,b].map(v=>Math.min(255,v+30).toString(16).padStart(2,'0')).join('');}catch{return hex;}}
+function darken(hex,a){try{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return '#'+[r,g,b].map(v=>Math.max(0,Math.floor(v*(1-a))).toString(16).padStart(2,'0')).join('');}catch{return hex;}}
+function toHex(c){if(!c)return '#dbeafe';if(c.startsWith('#')&&c.length===7)return c;if(c.startsWith('#')&&c.length===4)return '#'+c[1]+c[1]+c[2]+c[2]+c[3]+c[3];return '#dbeafe';}
+
+// ─── HIT TESTING ─────────────────────────────────────────────────────────────
+function hitTest(wx,wy) {
+  const sorted=[...S.objects].sort((a,b)=>(b.zi||0)-(a.zi||0));
+  for (const o of sorted) {
+    if (o.visible===false) continue;
+    if (o.locked) continue;
+    const hit = o.type==='wall'?hitWall(o,wx,wy):o.type==='dimension'?hitWall(o,wx,wy):hitFurn(o,wx,wy);
+    if(hit) return o;
+  }
+  return null;
+}
+function hitWall(w,wx,wy){const dx=w.x2-w.x1,dy=w.y2-w.y1,len=Math.hypot(dx,dy);if(len<1)return false;const t=((wx-w.x1)*dx+(wy-w.y1)*dy)/(len*len);if(t<0||t>1)return false;const px=w.x1+t*dx-wx,py=w.y1+t*dy-wy;return Math.hypot(px,py)<(w.t||S.wallT)/2+5;}
+function hitFurn(o,wx,wy){const cx=o.x+o.w/2,cy=o.y+o.h/2,a=-o.rot*Math.PI/180,dx=wx-cx,dy=wy-cy,lx=dx*Math.cos(a)-dy*Math.sin(a),ly=dx*Math.sin(a)+dy*Math.cos(a);return lx>=-o.w/2&&lx<=o.w/2&&ly>=-o.h/2&&ly<=o.h/2;}
+function hitHandle(o,wx,wy){
+  if(o.type==='wall'||o.type==='dimension'){if(Math.hypot(wx-o.x1,wy-o.y1)<8)return{id:'p1'};if(Math.hypot(wx-o.x2,wy-o.y2)<8)return{id:'p2'};return null;}
+  const cx=o.x+o.w/2,cy=o.y+o.h/2,a=-o.rot*Math.PI/180,dx=wx-cx,dy=wy-cy,lx=dx*Math.cos(a)-dy*Math.sin(a),ly=dx*Math.sin(a)+dy*Math.cos(a);
+  for(const h of getHandles(o)){if(Math.abs(lx-h.lx)<8&&Math.abs(ly-h.ly)<8)return h;}
+  return null;
+}
+function getHandles(o){const hw=o.w/2,hh=o.h/2;return[{id:'nw',lx:-hw-4,ly:-hh-4},{id:'n',lx:0,ly:-hh-4},{id:'ne',lx:hw+4,ly:-hh-4},{id:'e',lx:hw+4,ly:0},{id:'se',lx:hw+4,ly:hh+4},{id:'s',lx:0,ly:hh+4},{id:'sw',lx:-hw-4,ly:hh+4},{id:'w',lx:-hw-4,ly:0}];}
+
+// ─── COORD HELPERS ────────────────────────────────────────────────────────────
+function s2w(clientX,clientY){const r=cv.getBoundingClientRect(),cx=(clientX-r.left)*(cv.width/r.width),cy=(clientY-r.top)*(cv.height/r.height);return[(cx-S.panX)/S.zoom,(cy-S.panY)/S.zoom];}
+function snapV(v){return S.snap?Math.round(v/GRID)*GRID:v;}
+function snapP(x,y){return[snapV(x),snapV(y)];}
+function getAABB(o){if(o.type==='wall'||o.type==='dimension')return{x1:Math.min(o.x1,o.x2),y1:Math.min(o.y1,o.y2),x2:Math.max(o.x1,o.x2),y2:Math.max(o.y1,o.y2)};return{x1:o.x,y1:o.y,x2:o.x+o.w,y2:o.y+o.h};}
+function snapOverlaps(movingIds, skipId, nx, ny, nw, nh) {
+  const nx2=nx+nw, ny2=ny+nh;
+  for(const o of S.objects){
+    if(movingIds.has(o.id)||o.id===skipId) continue;
+    if(o.type==='wall'||o.type==='dimension') continue;
+    const b=getAABB(o);
+    if(nx<b.x2-1&&nx2>b.x1+1&&ny<b.y2-1&&ny2>b.y1+1) return true;
+  }
+  return false;
+}
+function edgeSnap(movingIds,x,y,w,h){
+  const thr=8/S.zoom;
+  const mx1=x,mx2=x+w,my1=y,my2=y+h;
+  let bx=null,by=null;
+  for(const o of S.objects){
+    if(movingIds.has(o.id))continue;
+    const b=getAABB(o);
+    for(const[me,them,snapX]of[[mx1,b.x2,true],[mx2,b.x1,true]]){
+      const d=them-me;
+      if(Math.abs(d)<thr&&(bx===null||Math.abs(d)<Math.abs(bx))){
+        if(!snapOverlaps(movingIds,o.id,x+d,y,w,h)) bx=d;
+      }
+    }
+    for(const[me,them]of[[my1,b.y2],[my2,b.y1]]){
+      const d=them-me;
+      if(Math.abs(d)<thr&&(by===null||Math.abs(d)<Math.abs(by))){
+        if(!snapOverlaps(movingIds,o.id,x,y+d,w,h)) by=d;
+      }
+    }
+  }
+  return[bx??0,by??0];
+}
+
+// ─── INTERACTION STATE ────────────────────────────────────────────────────────
+let hover=null, tempWall=null;
+const drag={active:false,type:null,sx:0,sy:0,origObjs:[],handle:null,wallSt:null};
+let boxSel=null;
+const measure={p1:null,p2:null,hover:null};
+let tempDim=null;
+
+// ─── GROUP HELPERS ────────────────────────────────────────────────────────────
+function getGroup(gid){return S.groups.find(g=>g.id===gid);}
+function getGroupObjs(gid){return S.objects.filter(o=>o.gid===gid);}
+function expandSelForGroups(){
+  const extra=new Set();
+  for(const id of S.sel){const o=getO(id);if(o&&o.gid){for(const mo of getGroupObjs(o.gid))extra.add(mo.id);}}
+  for(const id of extra)S.sel.add(id);
+}
+
+// ─── MOUSE ────────────────────────────────────────────────────────────────────
+cv.addEventListener('mousedown', onDown);
+cv.addEventListener('mousemove', onMove);
+cv.addEventListener('mouseup', onUp);
+cv.addEventListener('mouseleave', ()=>{hover=null;render();});
+cv.addEventListener('wheel', e=>{e.preventDefault();const[wx,wy]=s2w(e.clientX,e.clientY);zoomAt(wx,wy,S.zoom*(e.deltaY<0?1.12:.89));},{passive:false});
+
+function onDown(e) {
+  e.preventDefault();
+  const [wx,wy]=s2w(e.clientX,e.clientY);
+  if(e.button===1){drag.active=true;drag.type='pan';drag.sx=e.clientX;drag.sy=e.clientY;cv.style.cursor='grabbing';return;}
+
+  if(S.mode==='measure'){
+    if(!measure.p1||measure.p2){measure.p1={x:wx,y:wy};measure.p2=null;}
+    else{measure.p2={x:wx,y:wy};}
+    render();return;
+  }
+
+  if(S.mode==='dim'){
+    const[sx,sy]=snapP(wx,wy);
+    if(!tempDim){tempDim={type:'dimension',x1:sx,y1:sy,x2:sx,y2:sy,col:'#1e40af',name:'치수',zi:S.objects.length};}
+    else{
+      if(Math.hypot(tempDim.x2-tempDim.x1,tempDim.y2-tempDim.y1)>4){
+        pushUndo();S.objects.push({...tempDim,id:'o'+S.nextId++});refreshLayerList();autoSave();
+      }
+      tempDim=null;
+    }
+    render();return;
+  }
+
+  if(S.mode==='wall'){
+    const wt=$('wc-thick');if(wt)S.wallT=+wt.value||S.wallT;
+    pushUndo();
+    const[sx,sy]=snapP(wx,wy);
+    drag.active=true;drag.type='wall';drag.wallSt={x:sx,y:sy};
+    tempWall={type:'wall',x1:sx,y1:sy,x2:sx,y2:sy,t:S.wallT,col:'#334155',name:'벽',zi:0};
+    return;
+  }
+
+  if(S.sel.size===1){
+    const so=getO([...S.sel][0]);
+    if(so){const h=hitHandle(so,wx,wy);if(h){pushUndo();drag.active=true;drag.type='resize';drag.handle=h;drag.sx=wx;drag.sy=wy;drag.origObjs=[clone(so)];return;}}
+  }
+
+  const hit=hitTest(wx,wy);
+  if(hit){
+    if(e.shiftKey){S.sel.has(hit.id)?S.sel.delete(hit.id):S.sel.add(hit.id);}
+    else{
+      if(!S.sel.has(hit.id)){
+        S.sel.clear(); S.sel.add(hit.id);
+        if(hit.gid) expandSelForGroups();
+      }
+    }
+    pushUndo();
+    drag.active=true;drag.type='move';drag.sx=wx;drag.sy=wy;
+    drag.origObjs=[...S.sel].map(id=>clone(getO(id)));
+    refreshPanel();render();return;
+  }
+  if(!e.shiftKey)S.sel.clear();
+  refreshPanel();render();
+  if(S.mode==='select'){
+    drag.active=true;drag.type='boxsel';drag.sx=wx;drag.sy=wy;
+    boxSel={x1:wx,y1:wy,x2:wx,y2:wy};
+  } else {
+    drag.active=true;drag.type='pan';drag.sx=e.clientX;drag.sy=e.clientY;
+    cv.style.cursor='grabbing';
+  }
+}
+
+function onMove(e) {
+  const[wx,wy]=s2w(e.clientX,e.clientY);
+  if(drag.type==='pan'){S.panX+=e.clientX-drag.sx;S.panY+=e.clientY-drag.sy;drag.sx=e.clientX;drag.sy=e.clientY;cv.style.cursor='grabbing';render();return;}
+  if(drag.type==='boxsel'){boxSel.x2=wx;boxSel.y2=wy;render();return;}
+  if(!drag.active){
+    if(S.mode==='measure'&&measure.p1&&!measure.p2){measure.hover={x:wx,y:wy};render();return;}
+    if(S.mode==='dim'&&tempDim){tempDim.x2=snapV(wx);tempDim.y2=snapV(wy);render();return;}
+    const hit=hitTest(wx,wy);const nh=hit?hit.id:null;if(nh!==hover){hover=nh;cv.style.cursor=nh?'pointer':(S.mode==='wall'||S.mode==='measure'||S.mode==='dim'?'crosshair':'default');render();}return;
+  }
+  if(drag.type==='wall'){
+    let[ex,ey]=snapP(wx,wy);
+    if(e.shiftKey){const dx=ex-drag.wallSt.x,dy=ey-drag.wallSt.y,a=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*(Math.PI/4),l=Math.hypot(dx,dy);ex=drag.wallSt.x+snapV(Math.cos(a)*l);ey=drag.wallSt.y+snapV(Math.sin(a)*l);}
+    tempWall.x2=ex;tempWall.y2=ey;
+    const lenPx=Math.hypot(ex-tempWall.x1,ey-tempWall.y1);
+    const wcLen=$('wc-len');if(wcLen&&document.activeElement!==wcLen)wcLen.value=Math.round(lenPx/PPM*100);
+    render();return;
+  }
+  if(drag.type==='move'){
+    const ddx=wx-drag.sx,ddy=wy-drag.sy;
+    for(const orig of drag.origObjs){const o=getO(orig.id);if(!o)continue;if(o.type==='wall'){o.x1=snapV(orig.x1+ddx);o.y1=snapV(orig.y1+ddy);o.x2=snapV(orig.x2+ddx);o.y2=snapV(orig.y2+ddy);}else{o.x=snapV(orig.x+ddx);o.y=snapV(orig.y+ddy);}}
+    if(S.sel.size===1){const o=getO([...S.sel][0]);if(o&&o.type!=='wall'){const[sdx,sdy]=edgeSnap(S.sel,o.x,o.y,o.w,o.h);o.x+=sdx;o.y+=sdy;}}
+    refreshPanel();render();return;
+  }
+  if(drag.type==='resize'){
+    const o=getO([...S.sel][0]);const orig=drag.origObjs[0];if(!o||o.type==='wall')return;
+    const ddx=wx-drag.sx,ddy=wy-drag.sy,a=-o.rot*Math.PI/180,ldx=ddx*Math.cos(a)-ddy*Math.sin(a),ldy=ddx*Math.sin(a)+ddy*Math.cos(a),id=drag.handle.id;
+    let nx=orig.x,ny=orig.y,nw=orig.w,nh=orig.h;
+    if(id.includes('e'))nw=Math.max(GRID,snapV(orig.w+ldx));
+    if(id.includes('s'))nh=Math.max(GRID,snapV(orig.h+ldy));
+    if(id.includes('w')){nw=Math.max(GRID,snapV(orig.w-ldx));nx=orig.x+orig.w-nw;}
+    if(id.includes('n')){nh=Math.max(GRID,snapV(orig.h-ldy));ny=orig.y+orig.h-nh;}
+    o.x=nx;o.y=ny;o.w=nw;o.h=nh;
+    refreshPanel();render();return;
+  }
+}
+
+function onUp(e) {
+  if(!drag.active)return;
+  if(drag.type==='boxsel'){
+    if(boxSel){
+      const bx1=Math.min(boxSel.x1,boxSel.x2),bx2=Math.max(boxSel.x1,boxSel.x2);
+      const by1=Math.min(boxSel.y1,boxSel.y2),by2=Math.max(boxSel.y1,boxSel.y2);
+      if(bx2-bx1>3||by2-by1>3){
+        for(const o of S.objects){
+          if(o.visible===false||o.locked)continue;
+          const b=getAABB(o);
+          if(b.x1>=bx1&&b.x2<=bx2&&b.y1>=by1&&b.y2<=by2)S.sel.add(o.id);
+        }
+      }
+      boxSel=null;
+    }
+    drag.active=false;drag.type=null;
+    refreshPanel();refreshLayerList();render();return;
+  }
+  if(drag.type==='wall'&&tempWall){
+    if(Math.hypot(tempWall.x2-tempWall.x1,tempWall.y2-tempWall.y1)>GRID/2){S.objects.push({...tempWall,id:'o'+S.nextId++});}
+    else S.undoStack.pop();
+    tempWall=null;const wl=$('wc-len');if(wl)wl.value='';refreshLayerList();
+  }
+  drag.active=false;drag.type=null;
+  cv.style.cursor=(S.mode==='wall'||S.mode==='measure')?'crosshair':'default';
+  refreshLayerList();render();
+  autoSave();
+}
+
+// ─── KEYBOARD ────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+  const tag=document.activeElement.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA')return;
+  if(e.key==='Delete'||e.key==='Backspace'){deleteSelected();}
+  else if((e.key==='r'||e.key==='R')&&!e.ctrlKey){rotateSelected();}
+  else if(e.key==='f'||e.key==='F'){flipSelected();}
+  else if(e.ctrlKey&&e.shiftKey&&(e.key==='g'||e.key==='G')){e.preventDefault();ungroupSelected();}
+  else if(e.ctrlKey&&(e.key==='g'||e.key==='G')){e.preventDefault();groupSelected();}
+  else if(e.ctrlKey&&e.key==='z'){e.preventDefault();undo();}
+  else if(e.ctrlKey&&(e.key==='y'||e.key==='Y')){e.preventDefault();redo();}
+  else if(e.ctrlKey&&e.key==='c'){e.preventDefault();copySelected();}
+  else if(e.ctrlKey&&e.key==='v'){e.preventDefault();pasteClipboard();}
+  else if(e.key==='Escape'||e.key==='s'||e.key==='S'){S.sel.clear();setMode('select');}
+  else if(e.key==='w'||e.key==='W'){setMode('wall');}
+  else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+    if(!S.sel.size)return;
+    e.preventDefault();
+    const step=e.shiftKey?GRID:1;
+    const dx=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0;
+    const dy=e.key==='ArrowUp'?-1:e.key==='ArrowDown'?1:0;
+    nudgeSelected(dx,dy,step);
+  }
+});
+
+// ─── PALETTE ─────────────────────────────────────────────────────────────────
+const ghost=$('ghost');
+const gctx=ghost.getContext('2d');
+let palDragging=false,palDef=null;
+
+function initPalette(){
+  const pal=$('palette');
+  for(const cat of FCATS){
+    const sec=document.createElement('div');sec.className='psec';
+    const hdr=document.createElement('div');hdr.className='psec-title';
+    const titleSpan=document.createElement('span');titleSpan.textContent=cat.title;
+    const arrow=document.createElement('span');arrow.className='psec-arrow';arrow.textContent='▼';
+    hdr.appendChild(titleSpan);hdr.appendChild(arrow);
+    const items=document.createElement('div');items.className='psec-items';
+    hdr.addEventListener('click',()=>{
+      const collapsed=items.classList.toggle('collapsed');
+      arrow.classList.toggle('collapsed',collapsed);
+    });
+    for(const def of cat.defs){
+      if(def.sub==='__wall__'){
+        const item=document.createElement('div');item.className='pal-item wall-tool';
+        const ic=document.createElement('canvas');ic.width=40;ic.height=32;
+        const ictx=ic.getContext('2d');
+        ictx.fillStyle='#334155';ictx.fillRect(4,12,32,8);
+        ictx.strokeStyle='#1f2937';ictx.lineWidth=1;ictx.strokeRect(4,12,32,8);
+        const nm=document.createElement('span');nm.className='pal-name';nm.textContent=def.name;
+        item.appendChild(ic);item.appendChild(nm);
+        item.addEventListener('mousedown',ev=>{ev.preventDefault();ev.stopPropagation();setMode('wall');});
+        items.appendChild(item);
+        continue;
+      }
+      const item=document.createElement('div');item.className='pal-item';
+      const ic=document.createElement('canvas');ic.width=40;ic.height=32;
+      const ictx=ic.getContext('2d');const sc=Math.min(36/def.w,28/def.h);
+      ictx.save();ictx.translate(20,16);ictx.scale(sc,sc);drawShape(ictx,def.sub,def.w/2,def.h/2,def.w,def.h,def.col,false);ictx.restore();
+      const nm=document.createElement('span');nm.className='pal-name';nm.textContent=def.name;
+      item.appendChild(ic);item.appendChild(nm);
+      item.addEventListener('mousedown',ev=>startPalDrag(ev,def));
+      items.appendChild(item);
+    }
+    sec.appendChild(hdr);sec.appendChild(items);
+    pal.appendChild(sec);
+  }
+}
+
+function startPalDrag(e,def){
+  e.preventDefault();palDef=def;palDragging=true;
+  ghost.width=def.w;ghost.height=def.h;
+  gctx.clearRect(0,0,def.w,def.h);gctx.save();gctx.translate(def.w/2,def.h/2);drawShape(gctx,def.sub,def.w/2,def.h/2,def.w,def.h,def.col,false);gctx.restore();
+  const gw=def.w*S.zoom,gh=def.h*S.zoom;
+  ghost.style.cssText=`position:fixed;pointer-events:none;z-index:9999;display:block;opacity:.75;width:${gw}px;height:${gh}px;left:${e.clientX-gw/2}px;top:${e.clientY-gh/2}px`;
+}
+document.addEventListener('mousemove',e=>{if(!palDragging)return;const gw=parseFloat(ghost.style.width)||palDef.w,gh=parseFloat(ghost.style.height)||palDef.h;ghost.style.left=(e.clientX-gw/2)+'px';ghost.style.top=(e.clientY-gh/2)+'px';});
+document.addEventListener('mouseup',e=>{
+  if(!palDragging)return;palDragging=false;ghost.style.display='none';
+  const r=cv.getBoundingClientRect();
+  if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom){
+    const[wx,wy]=s2w(e.clientX,e.clientY);const def=palDef;const[sx,sy]=snapP(wx-def.w/2,wy-def.h/2);
+    pushUndo();
+    const o={
+      id:'o'+S.nextId++, type:'furniture', sub:def.sub,
+      x:sx, y:sy, w:def.w, h:def.h, rot:0, flipX:false,
+      col:def.col, name:def.name, zi:S.objects.length,
+      visible:true, locked:false,
+      // ── 텍스트 초기값: textlabel / roomlabel 분기 ──
+      ...(def.sub==='textlabel' ? {text:'텍스트', fontSize:18, textColor:'#1e293b'} :
+          def.sub==='roomlabel' ? {text:'텍스트',  fontSize:22, textColor:'#1e293b'} : {})
+    };
+    S.objects.push(o);S.sel.clear();S.sel.add(o.id);
+    refreshPanel();refreshLayerList();render();autoSave();
+  }
+  palDef=null;
+});
+
+// ─── OPERATIONS ──────────────────────────────────────────────────────────────
+function getO(id){return S.objects.find(o=>o.id===id);}
+function clone(o){return o?JSON.parse(JSON.stringify(o)):null;}
+
+function deleteSelected(){
+  if(!S.sel.size)return;
+  pushUndo();
+  S.objects=S.objects.filter(o=>!S.sel.has(o.id));
+  for(const g of S.groups){g.childIds=g.childIds.filter(id=>S.objects.find(o=>o.id===id));}
+  S.groups=S.groups.filter(g=>g.childIds.length>0);
+  S.sel.clear();refreshPanel();refreshLayerList();render();autoSave();
+}
+function rotateSelected(){
+  if(!S.sel.size)return;
+  pushUndo();
+  for(const id of S.sel){const o=getO(id);if(o&&o.type==='furniture')o.rot=(o.rot+90)%360;}
+  refreshPanel();render();autoSave();
+}
+function flipSelected(){
+  if(!S.sel.size)return;
+  pushUndo();
+  for(const id of S.sel){const o=getO(id);if(o&&o.type==='furniture')o.flipX=!o.flipX;}
+  refreshPanel();render();autoSave();
+}
+function groupSelected(){
+  if(S.sel.size<2)return;
+  pushUndo();
+  const gid='g'+S.nextGid++;
+  const name='그룹 '+(S.groups.length+1);
+  const childIds=[...S.sel];
+  for(const id of childIds){const o=getO(id);if(o)o.gid=gid;}
+  S.groups.push({id:gid,name,childIds,collapsed:false});
+  refreshPanel();refreshLayerList();render();autoSave();
+}
+function ungroupSelected(){
+  if(!S.sel.size)return;
+  pushUndo();
+  const gidsToRemove=new Set();
+  for(const id of S.sel){const o=getO(id);if(o&&o.gid){gidsToRemove.add(o.gid);delete o.gid;}}
+  S.groups=S.groups.filter(g=>!gidsToRemove.has(g.id));
+  refreshPanel();refreshLayerList();render();autoSave();
+}
+function copySelected(){
+  if(!S.sel.size)return;
+  const allIds=new Set(S.sel);
+  for(const id of S.sel){const o=getO(id);if(o&&o.gid){for(const mo of getGroupObjs(o.gid))allIds.add(mo.id);}}
+  const copiedObjs=[...allIds].map(id=>clone(getO(id))).filter(Boolean);
+  const gidsUsed=new Set(copiedObjs.map(o=>o.gid).filter(Boolean));
+  const copiedGroups=S.groups.filter(g=>gidsUsed.has(g.id)).map(g=>clone(g));
+  S.clipboard={objects:copiedObjs,groups:copiedGroups};
+}
+function pasteClipboard(){
+  if(!S.clipboard)return;
+  pushUndo();
+  const idMap={}, gidMap={};
+  const offset=GRID*2;
+  const newObjs=S.clipboard.objects.map(o=>{
+    const newId='o'+S.nextId++;
+    idMap[o.id]=newId;
+    return{...o,id:newId,x:(o.x||0)+offset,y:(o.y||0)+offset};
+  });
+  const newGroups=S.clipboard.groups.map(g=>{
+    const newGid='g'+S.nextGid++;
+    gidMap[g.id]=newGid;
+    return{...g,id:newGid,name:g.name+' (복사)',childIds:g.childIds.map(id=>idMap[id]).filter(Boolean)};
+  });
+  for(const o of newObjs){if(o.gid&&gidMap[o.gid])o.gid=gidMap[o.gid];}
+  S.objects.push(...newObjs);
+  S.groups.push(...newGroups);
+  S.sel.clear();
+  for(const o of newObjs)S.sel.add(o.id);
+  refreshPanel();refreshLayerList();render();autoSave();
+}
+function nudgeSelected(dx,dy,step){
+  pushUndo();
+  for(const id of S.sel){
+    const o=getO(id);if(!o)continue;
+    if(o.type==='wall'){o.x1+=dx*step;o.y1+=dy*step;o.x2+=dx*step;o.y2+=dy*step;}
+    else{o.x+=dx*step;o.y+=dy*step;}
+  }
+  refreshPanel();render();autoSave();
+}
+function setMode(m){
+  S.mode=m;
+  $('btn-select').classList.toggle('active',m==='select');
+  $('btn-wall').classList.toggle('active',m==='wall');
+  $('btn-measure').classList.toggle('active',m==='measure');
+  $('btn-dim').classList.toggle('active',m==='dim');
+  cv.style.cursor=(m==='wall'||m==='measure'||m==='dim')?'crosshair':'default';
+  $('wall-hud').classList.toggle('visible',m==='wall');
+  if(m!=='measure'){measure.p1=null;measure.p2=null;measure.hover=null;}
+  if(m!=='dim'){tempDim=null;}
+  if(m==='wall'){const wt=$('wc-thick');if(wt)wt.value=S.wallT;}
+  if(m!=='select'&&m!=='measure'&&m!=='dim'){S.sel.clear();refreshPanel();}
+  render();
+}
+function applyWallLen(){
+  if(!tempWall)return;
+  const cm=parseFloat($('wc-len').value);
+  if(!cm||cm<=0)return;
+  const px=cm/100*PPM;
+  const dx=tempWall.x2-tempWall.x1,dy=tempWall.y2-tempWall.y1;
+  const len=Math.hypot(dx,dy);
+  if(len<1){tempWall.x2=tempWall.x1+px;tempWall.y2=tempWall.y1;}
+  else{const s=px/len;tempWall.x2=tempWall.x1+dx*s;tempWall.y2=tempWall.y1+dy*s;}
+  render();
+}
+function doZoom(d){zoomAt(cv.width/2/S.zoom,cv.height/2/S.zoom,S.zoom+d);}
+function zoomAt(wx,wy,nz){nz=Math.max(0.15,Math.min(5,nz));S.panX=S.panX+(S.zoom-nz)*wx;S.panY=S.panY+(S.zoom-nz)*wy;S.zoom=nz;$('zoom-badge').textContent=Math.round(nz*100)+'%';render();}
+function resetView(){S.zoom=1;const ow=S.offW*PPM,oh=S.offH*PPM;S.panX=Math.max(20,(cv.width-ow)/2);S.panY=Math.max(20,(cv.height-oh)/2);$('zoom-badge').textContent='100%';render();}
+function applyOfficeSize(){S.offW=parseFloat($('off-w').value)||20;S.offH=parseFloat($('off-h').value)||15;render();autoSave();}
+
+// ─── UNDO / REDO ─────────────────────────────────────────────────────────────
+function pushUndo(){
+  S.undoStack.push({objs:JSON.parse(JSON.stringify(S.objects)),grps:JSON.parse(JSON.stringify(S.groups)),nid:S.nextId,ngid:S.nextGid});
+  if(S.undoStack.length>60)S.undoStack.shift();
+  S.redoStack=[];updateUndoButtons();
+}
+function undo(){
+  if(!S.undoStack.length)return;
+  S.redoStack.push({objs:JSON.parse(JSON.stringify(S.objects)),grps:JSON.parse(JSON.stringify(S.groups)),nid:S.nextId,ngid:S.nextGid});
+  const s=S.undoStack.pop();S.objects=s.objs;S.groups=s.grps||[];S.nextId=s.nid;S.nextGid=s.ngid||S.nextGid;
+  S.sel.clear();refreshPanel();refreshLayerList();render();updateUndoButtons();autoSave();
+}
+function redo(){
+  if(!S.redoStack.length)return;
+  S.undoStack.push({objs:JSON.parse(JSON.stringify(S.objects)),grps:JSON.parse(JSON.stringify(S.groups)),nid:S.nextId,ngid:S.nextGid});
+  const s=S.redoStack.pop();S.objects=s.objs;S.groups=s.grps||[];S.nextId=s.nid;S.nextGid=s.ngid||S.nextGid;
+  S.sel.clear();refreshPanel();refreshLayerList();render();updateUndoButtons();autoSave();
+}
+function updateUndoButtons(){$('btn-undo').disabled=!S.undoStack.length;$('btn-redo').disabled=!S.redoStack.length;}
+
+// ─── PANEL ───────────────────────────────────────────────────────────────────
+function refreshPanel(){
+  const pe=$('obj-props');
+  if(S.sel.size===1){
+    const o=getO([...S.sel][0]);if(!o){pe.style.display='none';refreshLayerList();return;}
+    pe.style.display='block';
+    $('p-name').value=o.name||'';$('p-color').value=toHex(o.col||'#dbeafe');
+    // ── textlabel 또는 roomlabel 이면 텍스트 패널 표시 ──
+    const isTxt = isLabelType(o.sub);
+    const isDim=o.type==='dimension';
+    if(isDim){
+      $('p-x').value=Math.round(o.x1);$('p-y').value=Math.round(o.y1);$('p-w').value=Math.round(o.x2-o.x1);$('p-h').value=Math.round(o.y2-o.y1);
+      $('p-wh').style.display='flex';$('p-rot-row').style.display='none';
+    } else if(o.type==='wall'){
+      $('p-x').value=Math.round(o.x1);$('p-y').value=Math.round(o.y1);$('p-w').value=Math.round(o.x2-o.x1);$('p-h').value=Math.round(o.y2-o.y1);
+      $('p-wh').style.display='flex';$('p-rot-row').style.display='none';
+    }else{
+      $('p-x').value=Math.round(o.x);$('p-y').value=Math.round(o.y);$('p-w').value=Math.round(o.w);$('p-h').value=Math.round(o.h);$('p-rot').value=Math.round(o.rot);
+      $('p-wh').style.display='flex';$('p-rot-row').style.display='flex';
+    }
+    $('p-textrow').style.display=isTxt?'flex':'none';
+    $('p-fsrow').style.display=isTxt?'flex':'none';
+    if(isTxt){$('p-text').value=o.text||(o.sub==='roomlabel'?'텍스트':'텍스트');$('p-fontsize').value=o.fontSize||(o.sub==='roomlabel'?22:18);}
+  }else if(S.sel.size>1){
+    pe.style.display='block';$('p-name').value='(다중 선택)';$('p-wh').style.display='none';$('p-rot-row').style.display='none';
+    $('p-textrow').style.display='none';$('p-fsrow').style.display='none';
+  }else{pe.style.display='none';}
+  refreshLayerList();
+}
+function applyPropName(){for(const id of S.sel){const o=getO(id);if(o)o.name=$('p-name').value;}refreshLayerList();}
+function applyPropColor(){for(const id of S.sel){const o=getO(id);if(o)o.col=$('p-color').value;}render();}
+function applyPropText(){
+  if(S.sel.size!==1)return;
+  const o=getO([...S.sel][0]);
+  if(o && isLabelType(o.sub)){o.text=$('p-text').value;render();autoSave();}
+}
+function applyPropFontSize(){
+  if(S.sel.size!==1)return;
+  const o=getO([...S.sel][0]);
+  if(o && isLabelType(o.sub)){o.fontSize=Math.max(6,+$('p-fontsize').value||18);render();autoSave();}
+}
+
+// ─── TEXT INLINE EDITOR ───────────────────────────────────────────────────────
+let _txObj=null;
+function commitTextEditor(){
+  const ed=$('text-editor'),ta=$('text-ta');
+  if(ed.style.display==='none'||!_txObj)return;
+  pushUndo();
+  _txObj.text=ta.value;
+  _txObj=null;
+  ed.style.display='none';
+  refreshPanel();render();autoSave();
+}
+document.addEventListener('mousedown',e=>{
+  const ed=$('text-editor');
+  if(ed.style.display!=='none'&&!ed.contains(e.target)) commitTextEditor();
+},true);
+
+cv.addEventListener('dblclick',e=>{
+  const[wx,wy]=s2w(e.clientX,e.clientY);
+  const hit=hitTest(wx,wy);
+  // ── roomlabel도 더블클릭 편집 가능 ──
+  if(hit && isLabelType(hit.sub)) openTextEditor(hit);
+});
+function openTextEditor(o){
+  commitTextEditor();
+  _txObj=o;
+  const ed=$('text-editor'),ta=$('text-ta');
+  const cx=(o.x+o.w/2)*S.zoom+S.panX, cy=(o.y+o.h/2)*S.zoom+S.panY;
+  const sw=Math.max(60,o.w*S.zoom), sh=Math.max(28,o.h*S.zoom);
+  ta.value=o.text||(o.sub==='roomlabel'?'공간명':'텍스트');
+  ta.style.width=sw+'px'; ta.style.height=sh+'px';
+  ta.style.fontSize=((o.fontSize||18)*S.zoom)+'px';
+  ta.style.lineHeight='1.25';
+  ed.style.left=(cx-sw/2)+'px'; ed.style.top=(cy-sh/2)+'px';
+  ed.style.display='block';
+  ta.focus(); ta.select();
+  ta.onkeydown=ev=>{if(ev.key==='Escape'){_txObj=null;ed.style.display='none';render();}};
+}
+function applyPropGeom(){
+  if(S.sel.size!==1)return;
+  const o=getO([...S.sel][0]);if(!o)return;
+  if(o.type==='wall'){const x=parseInt($('p-x').value)||o.x1,y=parseInt($('p-y').value)||o.y1,dx=parseInt($('p-w').value)||0,dy=parseInt($('p-h').value)||0;o.x1=x;o.y1=y;o.x2=x+dx;o.y2=y+dy;}
+  else{o.x=parseInt($('p-x').value)||o.x;o.y=parseInt($('p-y').value)||o.y;o.w=Math.max(1,parseInt($('p-w').value)||o.w);o.h=Math.max(1,parseInt($('p-h').value)||o.h);o.rot=parseFloat($('p-rot').value)||0;}
+  render();
+}
+function toggleVis(id,e){
+  e.stopPropagation();
+  const o=getO(id);if(!o)return;
+  o.visible=(o.visible===false)?true:false;
+  render();refreshLayerList();autoSave();
+}
+function toggleLock(id,e){
+  e.stopPropagation();
+  const o=getO(id);if(!o)return;
+  o.locked=!o.locked;
+  if(o.locked)S.sel.delete(id);
+  refreshPanel();refreshLayerList();render();autoSave();
+}
+function toggleGroupCollapse(gid,e){
+  e.stopPropagation();
+  const g=getGroup(gid);if(!g)return;
+  g.collapsed=!g.collapsed;
+  refreshLayerList();
+}
+function refreshLayerList(){
+  const ll=$('layer-list');ll.innerHTML='';
+  const allObjs=[...S.objects].reverse();
+  const usedGids=new Set(S.objects.map(o=>o.gid).filter(Boolean));
+  const validGroups=S.groups.filter(g=>usedGids.has(g.id));
+  const inGroup=new Set();
+  for(const g of validGroups)for(const cid of g.childIds)inGroup.add(cid);
+  function makeItem(o){
+    const it=document.createElement('div');
+    const isSel=S.sel.has(o.id);
+    it.className='layer-item'+(isSel?' sel':'')+(o.visible===false?' hidden-obj':'')+(o.locked?' locked-obj':'');
+    const visBtn=document.createElement('button');
+    visBtn.className='lbtn'+(o.visible!==false?' active-state':'');
+    visBtn.title='표시/숨기기';visBtn.textContent=o.visible===false?'🙈':'👁';
+    visBtn.addEventListener('click',ev=>toggleVis(o.id,ev));
+    const dot=document.createElement('span');dot.className='ldot';
+    dot.style.background=o.col||(o.type==='wall'?'#334155':'#94a3b8');
+    const typePrefix = o.type==='wall'?'━ ': (o.flipX?'↔ ':'');
+    const nm=document.createElement('span');nm.className='lname';nm.textContent=typePrefix+o.name;
+    const lockBtn=document.createElement('button');
+    lockBtn.className='lbtn'+(o.locked?' active-state':'');
+    lockBtn.title='잠금/해제';lockBtn.textContent=o.locked?'🔒':'🔓';
+    lockBtn.addEventListener('click',ev=>toggleLock(o.id,ev));
+    it.appendChild(visBtn);it.appendChild(dot);it.appendChild(nm);it.appendChild(lockBtn);
+    it.addEventListener('click',()=>{S.sel.clear();S.sel.add(o.id);if(o.gid)expandSelForGroups();refreshPanel();render();});
+    return it;
+  }
+  for(const g of validGroups){
+    const grpObjs=allObjs.filter(o=>o.gid===g.id);
+    if(!grpObjs.length)continue;
+    const isGrpSel=grpObjs.every(o=>S.sel.has(o.id));
+    const grpDiv=document.createElement('div');grpDiv.className='layer-group';
+    const hdr=document.createElement('div');
+    hdr.className='layer-group-hdr'+(isGrpSel?' sel-group':'');
+    const arrow=document.createElement('span');arrow.className='layer-group-arrow'+(g.collapsed?' collapsed':'');arrow.textContent='▼';
+    const icon=document.createElement('span');icon.textContent='📁';icon.style.fontSize='11px';
+    const nm=document.createElement('span');nm.className='lname';nm.textContent=g.name;
+    const cnt=document.createElement('span');cnt.style.cssText='font-size:10px;color:#94a3b8;flex-shrink:0';cnt.textContent='('+grpObjs.length+')';
+    hdr.appendChild(arrow);hdr.appendChild(icon);hdr.appendChild(nm);hdr.appendChild(cnt);
+    hdr.addEventListener('click',()=>{S.sel.clear();for(const o of grpObjs)S.sel.add(o.id);refreshPanel();render();});
+    arrow.addEventListener('click',ev=>{ev.stopPropagation();g.collapsed=!g.collapsed;refreshLayerList();});
+    grpDiv.appendChild(hdr);
+    if(!g.collapsed){
+      const children=document.createElement('div');children.className='layer-group-children';
+      for(const o of grpObjs)children.appendChild(makeItem(o));
+      grpDiv.appendChild(children);
+    }
+    ll.appendChild(grpDiv);
+  }
+  const ungrouped=allObjs.filter(o=>!inGroup.has(o.id));
+  if(validGroups.length>0&&ungrouped.length>0){const sep=document.createElement('div');sep.className='layer-sep';ll.appendChild(sep);}
+  for(const o of ungrouped){ll.appendChild(makeItem(o));}
+}
+function layerMove(dir){
+  if(S.sel.size!==1)return;
+  const id=[...S.sel][0];const idx=S.objects.findIndex(o=>o.id===id);const target=idx+dir;
+  if(target<0||target>=S.objects.length)return;
+  pushUndo();[S.objects[idx],S.objects[target]]=[S.objects[target],S.objects[idx]];
+  S.objects.forEach((o,i)=>o.zi=i);refreshLayerList();render();autoSave();
+}
+
+// ─── AUTO SAVE / LOAD ─────────────────────────────────────────────────────────
+let _saveToast=null;
+function autoSave(){
+  try{
+    const data={objects:S.objects,groups:S.groups,offW:S.offW,offH:S.offH,wallT:S.wallT,nextId:S.nextId,nextGid:S.nextGid,panX:S.panX,panY:S.panY,zoom:S.zoom};
+    localStorage.setItem(LS_KEY,JSON.stringify(data));
+    showToast();
+  }catch(e){}
+}
+function showToast(){
+  const t=$('save-toast');t.style.opacity='1';
+  clearTimeout(_saveToast);_saveToast=setTimeout(()=>t.style.opacity='0',1200);
+}
+function autoLoad(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);if(!raw)return false;
+    const d=JSON.parse(raw);
+    S.objects=d.objects||[];S.groups=d.groups||[];
+    S.offW=d.offW||20;S.offH=d.offH||15;S.wallT=d.wallT||8;
+    S.nextId=d.nextId||1;S.nextGid=d.nextGid||1;
+    if(d.panX!=null)S.panX=d.panX;if(d.panY!=null)S.panY=d.panY;if(d.zoom!=null)S.zoom=d.zoom;
+    return true;
+  }catch(e){return false;}
+}
+
+// ─── SAVE / LOAD / EXPORT ─────────────────────────────────────────────────────
+function saveLayout(){
+  const json=JSON.stringify({objects:S.objects,groups:S.groups,offW:S.offW,offH:S.offH,wallT:S.wallT,nextId:S.nextId,nextGid:S.nextGid},null,2);
+  showTextModal('저장 — 텍스트를 복사해 보관하세요',json,false);
+}
+function loadLayout(){showTextModal('불러오기 — 저장된 텍스트를 붙여넣고 확인을 누르세요','',true);}
+function showShortcuts(){
+  const rows=[
+    ['선택 모드','S 또는 Esc'],['벽 그리기 모드','W'],['삭제','Delete / Backspace'],
+    ['90° 회전','R'],['좌우 반전','F'],['되돌리기','Ctrl + Z'],['다시실행','Ctrl + Y'],
+    ['그룹 묶기','Ctrl + G'],['그룹 해제','Ctrl + Shift + G'],
+    ['복사','Ctrl + C'],['붙여넣기','Ctrl + V'],
+    ['다중 선택','Shift + 클릭'],['45° 벽 고정','Shift + 드래그 (벽 모드)'],
+    ['캔버스 패닝','빈 곳 드래그'],['줌인/줌아웃','마우스 휠'],
+    ['화면 이동','휠 버튼 클릭 + 드래그'],['드래그 선택','빈 곳 드래그 (선택 모드)'],
+    ['미세 이동','↑↓←→ 방향키 (1px)'],['격자 이동','Shift + 방향키 (20px)'],
+    ['가구 배치','팔레트에서 드래그&드롭'],['크기 조절','선택 후 모서리 핸들 드래그'],
+  ];
+  const overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center';
+  const box=document.createElement('div');box.style.cssText='background:#fff;border-radius:10px;padding:20px;width:430px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.25)';
+  const title=document.createElement('div');title.style.cssText='font-weight:700;font-size:14px;color:#1e293b;margin-bottom:14px';title.textContent='⌨ 단축키 안내';
+  const tbl=document.createElement('table');tbl.style.cssText='width:100%;border-collapse:collapse;font-size:12px';
+  for(const[action,key]of rows){const tr=document.createElement('tr');tr.style.borderBottom='1px solid #f1f5f9';const td1=document.createElement('td');td1.style.cssText='padding:6px 8px;color:#374151';td1.textContent=action;const td2=document.createElement('td');td2.style.cssText='padding:6px 8px;text-align:right';const kbd=document.createElement('kbd');kbd.style.cssText='background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;padding:2px 7px;font-family:monospace;font-size:11px;color:#1e293b';kbd.textContent=key;td2.appendChild(kbd);tr.appendChild(td1);tr.appendChild(td2);tbl.appendChild(tr);}
+  const closeBtn=document.createElement('button');closeBtn.textContent='닫기';closeBtn.className='tbtn';closeBtn.style.cssText='margin-top:14px;float:right';closeBtn.onclick=()=>document.body.removeChild(overlay);
+  overlay.onclick=e=>{if(e.target===overlay)document.body.removeChild(overlay);};
+  box.appendChild(title);box.appendChild(tbl);box.appendChild(closeBtn);overlay.appendChild(box);document.body.appendChild(overlay);
+}
+function showTextModal(title,content,editable){
+  const overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center';
+  const box=document.createElement('div');box.style.cssText='background:#fff;border-radius:10px;padding:20px;width:560px;max-width:95vw;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.25)';
+  const h=document.createElement('div');h.style.cssText='font-weight:700;font-size:14px;color:#1e293b';h.textContent=title;
+  const ta=document.createElement('textarea');ta.value=content;ta.readOnly=!editable;ta.style.cssText='width:100%;height:260px;font-family:monospace;font-size:11px;border:1px solid #e2e8f0;border-radius:6px;padding:8px;resize:vertical;color:#1e293b;background:'+(editable?'#fff':'#f8fafc');
+  const btns=document.createElement('div');btns.style.cssText='display:flex;gap:8px;justify-content:flex-end';
+  const close=()=>document.body.removeChild(overlay);
+  if(!editable){const btnCopy=document.createElement('button');btnCopy.textContent='📋 전체 복사';btnCopy.className='tbtn';btnCopy.onclick=()=>{ta.select();navigator.clipboard?.writeText(ta.value).catch(()=>{});btnCopy.textContent='✅ 복사됨';};btns.appendChild(btnCopy);}
+  const btnCancel=document.createElement('button');btnCancel.textContent='닫기';btnCancel.className='tbtn';btnCancel.onclick=close;btns.appendChild(btnCancel);
+  if(editable){
+    const btnOk=document.createElement('button');btnOk.textContent='확인';btnOk.className='tbtn active';
+    btnOk.onclick=()=>{try{const d=JSON.parse(ta.value);pushUndo();S.objects=d.objects||[];S.groups=d.groups||[];S.offW=d.offW||20;S.offH=d.offH||15;S.wallT=d.wallT||8;S.nextId=d.nextId||1;S.nextGid=d.nextGid||1;$('off-w').value=S.offW;$('off-h').value=S.offH;$('wall-t').value=S.wallT;S.sel.clear();refreshPanel();refreshLayerList();render();close();autoSave();}catch(err){alert('파싱 실패: '+err.message);}};
+    btns.appendChild(btnOk);
+  }
+  box.appendChild(h);box.appendChild(ta);box.appendChild(btns);overlay.appendChild(box);document.body.appendChild(overlay);
+  if(!editable)ta.select();else ta.focus();
+}
+function exportPNG(){
+  const tmp=document.createElement('canvas');tmp.width=cv.width;tmp.height=cv.height;
+  const tc=tmp.getContext('2d');tc.fillStyle='#ffffff';tc.fillRect(0,0,tmp.width,tmp.height);tc.drawImage(cv,0,0);
+  const a=document.createElement('a');a.download='office-layout.png';a.href=tmp.toDataURL('image/png');a.click();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+initPalette();
+const loaded=autoLoad();
+resizeCv();
+if(loaded){
+  $('off-w').value=S.offW;$('off-h').value=S.offH;$('wall-t').value=S.wallT;
+  $('zoom-badge').textContent=Math.round(S.zoom*100)+'%';
+  refreshLayerList();render();
+}else{
+  resetView();
+}
+</script>
+</body>
+</html>
 
