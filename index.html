@@ -2,6 +2,10 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#3b82f6">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-1024.png" type="image/png">
 <title>사무실 레이아웃 편집기</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -91,6 +95,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js'; window.OrbitControls = OrbitControls;</script>
+
+<style id="pwa-install-status-style">
+.pwa-install-status-button{position:fixed;right:20px;bottom:20px;z-index:9000;display:none;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border:1px solid rgba(15,81,50,.2);border-radius:999px;background:#0f766e;color:#fff;font:700 14px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 8px 22px rgba(15,23,42,.16);cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,background .15s ease}
+.pwa-install-status-button:hover{transform:translateY(-1px);box-shadow:0 10px 28px rgba(15,23,42,.2)}
+.pwa-install-status-button:disabled{cursor:default;transform:none;box-shadow:0 4px 12px rgba(15,23,42,.08)}
+.pwa-install-status-button.is-installed{display:inline-flex;background:#d1e7dd;color:#0f5132;border-color:#badbcc}
+</style>
 </head>
 <body>
 <div id="toolbar">
@@ -2900,6 +2911,33 @@ if(loaded){
 }else{
   resetView();
 }
+</script>
+
+<button id="pwaInstallButton" class="pwa-install-status-button" type="button" aria-label="앱 설치">앱 설치</button>
+<script id="pwa-install-status-script">
+(function(){
+  var installButton=document.getElementById("pwaInstallButton");
+  var deferredInstallPrompt=null;
+  var INSTALL_STATE_KEY="officeLayoutPwaInstalled";
+  var displayModeQuery=window.matchMedia?window.matchMedia("(display-mode: standalone)"):null;
+  function storageGet(key){try{return localStorage.getItem(key)}catch(_){return null}}
+  function storageSet(key,value){try{localStorage.setItem(key,value)}catch(_){}}
+  function storageRemove(key){try{localStorage.removeItem(key)}catch(_){}}
+  function isRunningInstalled(){return (displayModeQuery&&displayModeQuery.matches)||window.navigator.standalone===true}
+  function isPwaInstalled(){return storageGet(INSTALL_STATE_KEY)==="true"||isRunningInstalled()}
+  function setButton(label,disabled,visible){if(!installButton)return;installButton.style.display=visible?"inline-flex":"none";installButton.disabled=!!disabled;installButton.textContent=label;installButton.setAttribute("aria-label",label);installButton.classList.toggle("is-installed",label==="설치됨")}
+  function setWaiting(){isPwaInstalled()?setInstalled():setButton("앱 설치",false,false)}
+  function setReady(){isPwaInstalled()?setInstalled():setButton("앱 설치",false,true)}
+  function setInstalling(){setButton("설치 중",true,true)}
+  function setInstalled(){storageSet(INSTALL_STATE_KEY,"true");setButton("설치됨",true,true)}
+  if(isPwaInstalled())setInstalled();else setWaiting();
+  window.addEventListener("beforeinstallprompt",function(event){event.preventDefault();if(isRunningInstalled()){setInstalled();return}storageRemove(INSTALL_STATE_KEY);deferredInstallPrompt=event;setReady()});
+  if(installButton){installButton.addEventListener("click",async function(){if(isPwaInstalled())return setInstalled();if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();var choice=await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;if(choice&&choice.outcome==="accepted")setInstalling();else setReady()})}
+  window.addEventListener("appinstalled",function(){deferredInstallPrompt=null;setInstalled()});
+  var syncInstalledState=function(){if(isPwaInstalled())setInstalled()};
+  if(displayModeQuery&&typeof displayModeQuery.addEventListener==="function")displayModeQuery.addEventListener("change",syncInstalledState);else if(displayModeQuery&&typeof displayModeQuery.addListener==="function")displayModeQuery.addListener(syncInstalledState);
+  if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./service-worker.js").catch(function(error){console.warn("서비스 워커 등록 실패:",error)})})}
+})();
 </script>
 </body>
 </html>

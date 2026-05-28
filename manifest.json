@@ -1,0 +1,20 @@
+{
+  "name": "사무실 레이아웃",
+  "short_name": "레이아웃",
+  "description": "사무실 공간을 설계하는 APPS 도구",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f0f4f8",
+  "theme_color": "#3b82f6",
+  "lang": "ko-KR",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icons/icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
