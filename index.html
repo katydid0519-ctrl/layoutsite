@@ -4,8 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#3b82f6">
+<meta name="description" content="사무실 공간을 2D와 3D로 배치하고 편집하는 PWA 도구">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="레이아웃">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="./manifest.json">
-<link rel="icon" href="./icons/icon-1024.png" type="image/png">
+<link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
 <title>사무실 레이아웃 편집기</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -2932,10 +2937,11 @@ if(loaded){
   function setInstalled(){storageSet(INSTALL_STATE_KEY,"true");setButton("설치됨",true,true)}
   if(isPwaInstalled())setInstalled();else setWaiting();
   window.addEventListener("beforeinstallprompt",function(event){event.preventDefault();if(isRunningInstalled()){setInstalled();return}storageRemove(INSTALL_STATE_KEY);deferredInstallPrompt=event;setReady()});
-  if(installButton){installButton.addEventListener("click",async function(){if(isPwaInstalled())return setInstalled();if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();var choice=await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;if(choice&&choice.outcome==="accepted")setInstalling();else setReady()})}
+  if(installButton){installButton.addEventListener("click",async function(){if(isPwaInstalled())return setInstalled();if(!deferredInstallPrompt)return;deferredInstallPrompt.prompt();var choice=await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;if(choice&&choice.outcome==="accepted")setInstalled();else setReady()})}
   window.addEventListener("appinstalled",function(){deferredInstallPrompt=null;setInstalled()});
   var syncInstalledState=function(){if(isPwaInstalled())setInstalled()};
   if(displayModeQuery&&typeof displayModeQuery.addEventListener==="function")displayModeQuery.addEventListener("change",syncInstalledState);else if(displayModeQuery&&typeof displayModeQuery.addListener==="function")displayModeQuery.addListener(syncInstalledState);
+  window.addEventListener("storage",function(event){if(event.key===INSTALL_STATE_KEY&&event.newValue==="true")setInstalled()});
   if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./service-worker.js").catch(function(error){console.warn("서비스 워커 등록 실패:",error)})})}
 })();
 </script>
